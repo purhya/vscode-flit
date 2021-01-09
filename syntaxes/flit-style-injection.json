@@ -1,0 +1,10 @@
+{
+	"fileTypes": [],
+	"injectionSelector": "L:meta.embedded.block.html meta.property-value.css, L:meta.embedded.block.css meta.property-value.scss",
+	"patterns": [
+		{
+			"include": "source.ts#template-substitution-element"
+		}
+	],
+	"scopeName": "inline.flit.style.injection"
+}

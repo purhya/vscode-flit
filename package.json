@@ -1,0 +1,129 @@
+{
+	"name": "vscode-flit",
+	"displayName": "VScode Flit Plugin",
+	"description": "Syntax highlighting and IntelliSense for html & CSS inside TypeScript tagged template strings in Flit framework",
+	"version": "1.0.0",
+	"publisher": "pucelle",
+	"license": "MIT",
+	"repository": {
+		"url": "https://github.com/pucelle/vscode-flit.git"
+	},
+	"bugs": {
+		"url": "https://github.com/pucelle/vscode-flit/issues"
+	},
+	"categories": [
+		"Programming Languages"
+	],
+	"keywords": [
+		"flit"
+	],
+	"engines": {
+		"vscode": "^1.51.0"
+	},
+	"activationEvents": [
+		"onLanguage:typescript",
+		"onLanguage:typescriptreact"
+	],
+	"main": "./out/index.js",
+	"contributes": {
+		"grammars": [
+			{
+				"injectTo": [
+					"source.js",
+					"source.js.jsx",
+					"source.jsx",
+					"source.ts",
+					"source.tsx",
+					"text.html.basic"
+				],
+				"scopeName": "inline.flit",
+				"path": "./syntaxes/flit.json",
+				"embeddedLanguages": {
+					"meta.embedded.block.html": "html",
+					"meta.embedded.block.css": "css",
+					"source.css": "css"
+				}
+			},
+			{
+				"injectTo": [
+					"source.js",
+					"source.js.jsx",
+					"source.jsx",
+					"source.ts",
+					"source.tsx",
+					"text.html.basic"
+				],
+				"scopeName": "inline.flit.string.injection",
+				"path": "./syntaxes/flit-string-injection.json",
+				"embeddedLanguages": {
+					"meta.template.expression.ts": "typescript"
+				}
+			},
+			{
+				"injectTo": [
+					"source.js",
+					"source.js.jsx",
+					"source.jsx",
+					"source.ts",
+					"source.tsx",
+					"text.html.basic"
+				],
+				"scopeName": "inline.flit.style.injection",
+				"path": "./syntaxes/flit-style-injection.json",
+				"embeddedLanguages": {
+					"meta.template.expression.ts": "typescript"
+				}
+			},
+			{
+				"injectTo": [
+					"source.js",
+					"source.js.jsx",
+					"source.jsx",
+					"source.ts",
+					"source.tsx",
+					"text.html.basic"
+				],
+				"scopeName": "inline.flit-svg",
+				"path": "./syntaxes/flit-svg.json",
+				"embeddedLanguages": {
+					"meta.embedded.block.svg": "xml"
+				}
+			},
+			{
+				"injectTo": [
+					"source.js",
+					"source.js.jsx",
+					"source.jsx",
+					"source.ts",
+					"source.tsx",
+					"text.html.basic"
+				],
+				"scopeName": "inline.flit-css",
+				"path": "./syntaxes/flit-css.json",
+				"embeddedLanguages": {
+					"meta.embedded.block.css": "scss",
+					"source.css.scss": "scss"
+				}
+			}
+		],
+		"typescriptServerPlugins": [
+			{
+				"name": "typescript-flit-plugin",
+				"enableForWorkspaceTypeScriptVersions": true
+			}
+		]
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run build-all",
+		"build-all": "cd packages/typescript-flit-plugin && npm run build && cd ../.. && npm run build",
+		"build": "tsc -b",
+		"watch": "tsc -b -w"
+	},
+	"dependencies": {
+		"typescript-flit-plugin": "*"
+	},
+	"devDependencies": {
+		"typescript": "^3.9.5",
+		"vscode": "^1.1.37"
+	}
+}

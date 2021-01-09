@@ -1,0 +1,21 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "target": "esnext",
+        "rootDir": "src",
+        "outDir": "out",
+        "lib": ["esnext"],
+        "sourceMap": true,
+        "strict": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noImplicitReturns": true,
+		"noFallthroughCasesInSwitch": true,
+		"noImplicitAny": true,
+        "noImplicitThis": true
+    },
+    "exclude": [
+        "node_modules",
+        "out"
+    ]
+}

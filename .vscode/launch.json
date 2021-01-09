@@ -1,0 +1,21 @@
+// A launch configuration that launches the extension inside a new window
+{
+    "version": "0.1.0",
+    "configurations": [
+        {
+            "name": "Launch Extension",
+            "type": "extensionHost",
+            "request": "launch",
+            "runtimeExecutable": "${execPath}",
+            "args": [
+                "--disable-extensions", 
+                "--extensionDevelopmentPath=${workspaceRoot}"
+            ],
+            "outFiles": [
+                "${workspaceFolder}/out/**/*.js",
+                "${workspaceFolder}/node_modules/typescript-flit-plugin/out/**/*.js"
+            ],
+            "preLaunchTask": "npm: build-all"
+        }
+    ]
+}
