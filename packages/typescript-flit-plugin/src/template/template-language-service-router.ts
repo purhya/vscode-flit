@@ -1,37 +1,47 @@
-import {Logger, TemplateContext, TemplateLanguageService} from 'typescript-template-language-service-decorator'
+import {TemplateContext, TemplateLanguageService} from 'typescript-template-language-service-decorator'
 import * as ts from 'typescript/lib/tsserverlibrary'
 import {LanguageService as HTMLLanguageService} from 'vscode-html-languageservice'
 import {LanguageService as CSSLanguageService} from 'vscode-css-languageservice'
 import * as vscode from 'vscode-languageserver-types'
-import {VSCodeToTSTranslater} from './vscode-to-ts-translater'
+import {VSCodeToTSTranslater} from '../internal/vscode-to-ts-translater'
 import {TemplateDocumentProvider} from './template-document-provider'
+import {FlitService} from '../flit-component/flit-service'
+import {quickLog} from '../internal/logger'
 
 
 /** Matches common template syntax like html`...` or css`...` and route them to child language service. */
 export class TemplateLanguageServiceRouter implements TemplateLanguageService {
 
-	private readonly translater: VSCodeToTSTranslater
-	private readonly documentProvider: TemplateDocumentProvider
+	private translater: VSCodeToTSTranslater
+	private documentProvider: TemplateDocumentProvider
+	private flitService: FlitService
 
 	constructor(
 		typescript: typeof ts,
-		private readonly htmlLanguageService: HTMLLanguageService,
-		private readonly cssLanguageService: CSSLanguageService,
-		private readonly logger: Logger,
+		project: ts.server.Project,
+		private htmlLanguageService: HTMLLanguageService,
+		private cssLanguageService: CSSLanguageService,
 	) {
 		this.documentProvider = new TemplateDocumentProvider(htmlLanguageService, cssLanguageService)
 		this.translater = new VSCodeToTSTranslater(typescript)
-		this.logger.log('Server Started')
+		this.flitService = new FlitService(typescript, project, htmlLanguageService)
+
+		quickLog('Typescript Flit Plugin Started')
 	}
 
 	/** param `position` is local template position. */
+	getDefinitionAtPosition(_context: TemplateContext, _position: ts.LineAndCharacter): ts.DefinitionInfo[] {
+		return []
+	}
+
 	getCompletionsAtPosition(context: TemplateContext, position: ts.LineAndCharacter): ts.CompletionInfo {
-		let completions = this.getVSCodeCompletionItems(context, position)
+		this.documentProvider.updateContext(context)
+		let completions = this.getVSCodeCompletionItems(position)
+
 		return this.translater.translateCompletion(completions, context)
 	}
 
-	private getVSCodeCompletionItems(context: TemplateContext, position: ts.LineAndCharacter) {
-		this.documentProvider.updateContext(context)
+	private getVSCodeCompletionItems(position: ts.LineAndCharacter) {
 		let document = this.documentProvider.getDocumentAt(position)
 		let completions: vscode.CompletionList
 
@@ -51,16 +61,24 @@ export class TemplateLanguageServiceRouter implements TemplateLanguageService {
 		else {
 			completions = emptyCompletionList
 		}
+		
+		if (document.languageId === 'html') {
+			let flitCompletions = this.flitService.getCompletions(document, position)
+			if (flitCompletions) {
+				completions.items.push(...flitCompletions.items)
+			}
+		}
 
 		return completions
 	}
 
 	getCompletionEntryDetails(context: TemplateContext, position: ts.LineAndCharacter, name: string): ts.CompletionEntryDetails {
-		let completions = this.getVSCodeCompletionItems(context, position)
+		this.documentProvider.updateContext(context)
 
+		let completions = this.getVSCodeCompletionItems(position)
 		let item = completions.items.find(x => x.label === name)
 		if (!item) {
-			item = vscode.CompletionItem.create(name)
+			item = {label: name}
 		}
 
 		return this.translater.translateCompletionToEntryDetails(item)

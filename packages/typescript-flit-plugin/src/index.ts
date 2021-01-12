@@ -38,9 +38,9 @@ class HTMLPlugin implements ts.server.PluginModule{
 
 		let templateLanguageService = new TemplateLanguageServiceRouter(
 			this.typescript,
+			info.project,
 			this.htmlLanguageService,
 			this.cssLanguageService,
-			logger,
 		)
 
 		let languageService = decorateWithTemplateLanguageService(

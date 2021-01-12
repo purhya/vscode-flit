@@ -10,7 +10,7 @@ import {config} from '../config'
 export class VSCodeToTSTranslater {
 
 	constructor(
-		private readonly typescript: typeof ts
+		private typescript: typeof ts
 	) {}
 
 	private translateDiagnostic(diagnostic: vscode.Diagnostic, file: ts.SourceFile, document: TextDocument, context: TemplateContext): ts.Diagnostic | undefined {
@@ -148,6 +148,34 @@ export class VSCodeToTSTranslater {
 		}
 	}
 
+	private translateCompetionEntry(vsItem: vscode.CompletionItem, context: TemplateContext): ts.CompletionEntry {
+		let kind = vsItem.kind ? this.translateionCompletionItemKind(vsItem.kind) : this.typescript.ScriptElementKind.unknown
+
+		let entry: ts.CompletionEntry = {
+			name: this.removeSnippet(vsItem.label),
+			kind,
+			sortText: '0',
+		}
+
+		if (vsItem.textEdit) {
+			entry.insertText = this.removeSnippet(vsItem.textEdit.newText)
+
+			if (vsItem.textEdit.hasOwnProperty('range')) {
+				entry.replacementSpan = this.toTsSpan((vsItem.textEdit as vscode.TextEdit).range, context)
+			}
+			else {
+				entry.replacementSpan = this.toTsSpan((vsItem.textEdit as vscode.InsertReplaceEdit).replace, context)
+			}
+		}
+
+		return entry
+	}
+
+	/** vscode snippet syntax `$1` not been supported in typescript. */
+	private removeSnippet(label: string) {
+		return label.replace(/\$\d/, '')
+	}
+
 	translateCompletionToEntryDetails(item: vscode.CompletionItem): ts.CompletionEntryDetails {
 		return {
 			name: item.label,
@@ -159,27 +187,15 @@ export class VSCodeToTSTranslater {
 		} 
 	}
 
-	private translateCompetionEntry(vsItem: vscode.CompletionItem, context: TemplateContext): ts.CompletionEntry {
-		let kind = vsItem.kind ? this.translateionCompletionItemKind(vsItem.kind) : this.typescript.ScriptElementKind.unknown
-
-		let entry: ts.CompletionEntry = {
-			name: vsItem.label,
-			kind,
-			sortText: '0',
+	private toDisplayParts(text: string | vscode.MarkupContent | undefined): ts.SymbolDisplayPart[] {
+		if (!text) {
+			return []
 		}
 
-		if (vsItem.textEdit) {
-			entry.insertText = vsItem.textEdit.newText
-
-			if (vsItem.textEdit.hasOwnProperty('range')) {
-				entry.replacementSpan = this.toTsSpan((vsItem.textEdit as vscode.TextEdit).range, context)
-			}
-			else {
-				entry.replacementSpan = this.toTsSpan((vsItem.textEdit as vscode.InsertReplaceEdit).replace, context)
-			}
-		}
-
-		return entry
+		return [{
+			kind: 'text',
+			text: typeof text === 'string' ? text : text.value,
+		}]
 	}
 
 	private translateionCompletionItemKind(kind: vscode.CompletionItemKind): ts.ScriptElementKind {
@@ -235,17 +251,6 @@ export class VSCodeToTSTranslater {
 		}
 	}
 
-	private toDisplayParts(text: string | vscode.MarkupContent | undefined): ts.SymbolDisplayPart[] {
-		if (!text) {
-			return []
-		}
-
-		return [{
-			kind: 'text',
-			text: typeof text === 'string' ? text : text.value,
-		}]
-	}
-
 	toTsSpan(range: vscode.Range, context: TemplateContext): ts.TextSpan {
 		let editStart = context.toOffset(range.start)
 		let editEnd = context.toOffset(range.end)
@@ -260,5 +265,4 @@ export class VSCodeToTSTranslater {
 		let sourceFile = context.node.getSourceFile()
 		return diagnostics.map(diag => this.translateDiagnostic(diag, sourceFile, document, context)).filter(v => v) as ts.Diagnostic[]
 	}
-
 }

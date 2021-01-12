@@ -1,6 +1,7 @@
 import {getSCSSLanguageService, getCSSLanguageService, LanguageService as CSSLanguageService} from 'vscode-css-languageservice'
 
 
+/** Uses all scss language service except css completion. */
 export function getFlitCSSLanguageService(): CSSLanguageService {
 	let scssService = Object.assign({}, getSCSSLanguageService())
 	let cssService = getCSSLanguageService()

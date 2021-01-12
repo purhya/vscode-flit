@@ -9,10 +9,27 @@ import {config} from '../config'
 export class LanguageServiceLogger implements Logger {
 
 	constructor(
-		private readonly info: ts.server.PluginCreateInfo
-	) {}
+		private info: ts.server.PluginCreateInfo
+	) {
+		latestLogger = this
+	}
 
-	log(msg: string) {
-		this.info.project.projectService.logger.info(`[${config.pluginName}] ${msg}`)
+	log(message: string) {
+		this.info.project.projectService.logger.info(`[${config.pluginName}] ${message}`)
+	}
+}
+
+
+let latestLogger: LanguageServiceLogger
+
+/** It's very complex to pass logger object, so here give a quick log. */
+export function quickLog(message: any) {
+	if (latestLogger) {
+		if (typeof(message) === 'object') {
+			latestLogger.log(JSON.stringify(message))
+		}
+		else {
+			latestLogger.log(String(message))
+		}
 	}
 }

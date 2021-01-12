@@ -14,8 +14,7 @@
             "outFiles": [
                 "${workspaceFolder}/out/**/*.js",
                 "${workspaceFolder}/node_modules/typescript-flit-plugin/out/**/*.js"
-            ],
-            "preLaunchTask": "npm: build-all"
+            ]
         }
     ]
 }

@@ -3,13 +3,14 @@ import * as ts from 'typescript/lib/tsserverlibrary'
 import {HTMLDocument, LanguageService as HTMLLanguageService} from 'vscode-html-languageservice'
 import {LanguageService as CSSLanguageService, Stylesheet} from 'vscode-css-languageservice'
 import {HTMLEmbeddedRegionParser, HTMLEmbeddedRegions} from './html-embedded-region-parser'
-import {TemplateDocumentCreater} from './template-document-creater'
 import {TextDocument} from 'vscode-languageserver-textdocument'
 
 
 export class TemplateDocumentProvider {
 
-	private readonly embeddedParser: HTMLEmbeddedRegionParser
+	private embeddedParser: HTMLEmbeddedRegionParser
+
+	/** Last context when generating document. */
 	private lastContext: TemplateContext | null = null
 
 	/** Current HTML or CSS type TextDocument. */
@@ -28,8 +29,8 @@ export class TemplateDocumentProvider {
 	private stylesheet: Stylesheet | null = null
 
 	constructor(
-		private readonly htmlLanguageService: HTMLLanguageService,
-		private readonly cssLanguageService: CSSLanguageService,
+		private htmlLanguageService: HTMLLanguageService,
+		private cssLanguageService: CSSLanguageService
 	) {
 		this.embeddedParser = new HTMLEmbeddedRegionParser(htmlLanguageService)
 	}
@@ -41,7 +42,7 @@ export class TemplateDocumentProvider {
 			this.createDocument(context)
 		}
 
-		this.createDocument(context)
+		this.lastContext = context
 	}
 
 	/** 
@@ -71,6 +72,7 @@ export class TemplateDocumentProvider {
 	private clear() {
 		this.document = null
 		this.embeddedRegions = null
+		this.embeddedCSSDocument = null
 		this.htmlDocument = null
 		this.stylesheet = null
 	}
@@ -130,3 +132,32 @@ export class TemplateDocumentProvider {
 	}
 }
 
+
+namespace TemplateDocumentCreater {
+
+	/** 
+	 * Create a html document from template context.
+	 * The returned document will also map it's local offset to global position.
+	 */
+	export function createHTMLDocument(context: TemplateContext) {
+		return createDocument(context, context.text, 'html')
+	}
+
+
+	/** Create a css document from template context. */
+	export function createCSSDocument(context: TemplateContext) {
+		return createDocument(context, context.text, 'css')
+	}
+
+	
+    /** Create a embedded css document from template context. */
+	export function createEmbeddedCSSDocument(context: TemplateContext, documentRegions: HTMLEmbeddedRegions) {
+		let text = documentRegions.getEmbeddedDocumentContent('css')
+		return createDocument(context, text, 'css')
+	}
+
+
+	function createDocument(_context: TemplateContext, text: string, languageId: string) {
+		return TextDocument.create(`untitled://embedded.${languageId}`, languageId, 1, text)
+	}
+}

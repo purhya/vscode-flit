@@ -1,7 +1,7 @@
 {
 	"name": "vscode-flit",
-	"displayName": "VScode Flit Plugin",
-	"description": "Syntax highlighting and IntelliSense for html & CSS inside TypeScript tagged template strings in Flit framework",
+	"displayName": "VScode flit Plugin",
+	"description": "Syntax highlighting and IntelliSense for html & CSS inside TypeScript tagged template strings in flit framework",
 	"version": "1.0.0",
 	"publisher": "pucelle",
 	"license": "MIT",
@@ -116,6 +116,7 @@
 	"scripts": {
 		"vscode:prepublish": "npm run build-all",
 		"build-all": "cd packages/typescript-flit-plugin && npm run build && cd ../.. && npm run build",
+		"watch-typescript-flit-plugin": "cd packages/typescript-flit-plugin && npm run watch",
 		"build": "tsc -b",
 		"watch": "tsc -b -w"
 	},

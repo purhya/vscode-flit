@@ -18,7 +18,7 @@ interface EmbeddedRegion {
 export class HTMLEmbeddedRegionParser {
 
 	constructor(
-		private readonly languageService: HTMLLanguageService
+		private languageService: HTMLLanguageService
 	) {}
 
 	parse(document: TextDocument) {
@@ -100,8 +100,8 @@ export class HTMLEmbeddedRegions {
 	CSS_INNER_STYLE_PROPERTY = '__'
 
 	constructor(
-		private readonly document: TextDocument,
-		private readonly regions: EmbeddedRegion[],
+		private document: TextDocument,
+		private regions: EmbeddedRegion[],
 	) {}
 	
 	/** Get language from position, may return `css`, `javascript` or `html`. */
@@ -113,7 +113,8 @@ export class HTMLEmbeddedRegions {
 				if (offset <= region.end) {
 					return region.languageId
 				}
-			} else {
+			}
+			else {
 				break
 			}
 		}
@@ -164,18 +165,21 @@ export class HTMLEmbeddedRegions {
 		after: string
 	) {
         let result = before
-        let lineCharCount = 0
+        let leftCharCount = 0
         
         // Must keep line index!
 		for (let i = start; i < end; i++) {
 			let ch = content[i]
 			if (ch === '\n' || ch === '\r') {
 				result += ch
-				lineCharCount ++
+				leftCharCount = 0
+			}
+			else {
+				leftCharCount++
 			}
         }
         
-		result += ' '.repeat(end - start - lineCharCount - before.length - after.length)
+		result += ' '.repeat(leftCharCount - after.length)
         result += after
         
 		return result
