@@ -3,9 +3,9 @@ import {getLanguageService as getHTMLLanguageService, LanguageService as HTMLLan
 import {LanguageService as CSSLanguageService} from 'vscode-css-languageservice'
 import {config} from './config'
 import {TemplateLanguageServiceRouter} from './template/template-language-service-router'
-import {LanguageServiceLogger} from './internal/logger'
+import {LanguageServiceLogger} from './helpers/logger'
 import {decorateWithTemplateLanguageService} from 'typescript-template-language-service-decorator'
-import {getFlitCSSLanguageService} from './internal/css-language-service'
+import {getFlitCSSLanguageService} from './helpers/css-language-service'
 
 
 /** Class as entry of the ts plugin. */

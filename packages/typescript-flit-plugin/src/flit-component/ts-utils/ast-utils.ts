@@ -287,7 +287,11 @@ function getNodeLeadingComment(node: ts.Node): string | null {
 export function getNodeDescription(node: ts.Node): string | null {
 	let comment = getNodeLeadingComment(node)
 	if (comment) {
-		return comment.replace(/^\s*\/\/ ?|^\/\*\*\s*|\s*\*\/$|^\s*\* ?|/gm, '')
+		// //	^\s*\/\/ ?
+		// /**	^\/\*\*[^\n]*
+		// */	\s*\*\/\s*$
+		// *	^\s*\* ?
+		return comment.replace(/^\s*\/\/ ?|^\/\*\*[\s^\n]*|\s*\*\/\s*$|^\s*\* ?/gm, '')
 	}
 	else {
 		return null

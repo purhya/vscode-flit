@@ -33,3 +33,11 @@ export function quickLog(message: any) {
 		}
 	}
 }
+
+
+/** Print debug info. */
+export function debug(message: any) {
+	if (config.debugging) {
+		quickLog(message)
+	}
+}

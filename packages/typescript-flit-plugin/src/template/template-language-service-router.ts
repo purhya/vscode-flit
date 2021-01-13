@@ -3,16 +3,17 @@ import * as ts from 'typescript/lib/tsserverlibrary'
 import {LanguageService as HTMLLanguageService} from 'vscode-html-languageservice'
 import {LanguageService as CSSLanguageService} from 'vscode-css-languageservice'
 import * as vscode from 'vscode-languageserver-types'
-import {VSCodeToTSTranslater} from '../internal/vscode-to-ts-translater'
+import {VSCodeTSTranslater} from '../helpers/vscode-ts-translater'
 import {TemplateDocumentProvider} from './template-document-provider'
 import {FlitService} from '../flit-component/flit-service'
-import {quickLog} from '../internal/logger'
+import {debug, quickLog} from '../helpers/logger'
+import {TextDocument} from 'vscode-languageserver-textdocument'
 
 
 /** Matches common template syntax like html`...` or css`...` and route them to child language service. */
 export class TemplateLanguageServiceRouter implements TemplateLanguageService {
 
-	private translater: VSCodeToTSTranslater
+	private translater: VSCodeTSTranslater
 	private documentProvider: TemplateDocumentProvider
 	private flitService: FlitService
 
@@ -23,26 +24,67 @@ export class TemplateLanguageServiceRouter implements TemplateLanguageService {
 		private cssLanguageService: CSSLanguageService,
 	) {
 		this.documentProvider = new TemplateDocumentProvider(htmlLanguageService, cssLanguageService)
-		this.translater = new VSCodeToTSTranslater(typescript)
+		this.translater = new VSCodeTSTranslater(typescript)
 		this.flitService = new FlitService(typescript, project, htmlLanguageService)
 
 		quickLog('Typescript Flit Plugin Started')
 	}
 
-	/** param `position` is local template position. */
-	getDefinitionAtPosition(_context: TemplateContext, _position: ts.LineAndCharacter): ts.DefinitionInfo[] {
-		return []
+	getDefinitionAndBoundSpan(context: TemplateContext, position: ts.LineAndCharacter): ts.DefinitionInfoAndBoundSpan | undefined {
+		this.documentProvider.updateContext(context)
+		let document = this.documentProvider.getDocumentAt(position)
+
+		if (document.languageId === 'html') {
+			let flitDefinitions = this.flitService.getDefinition(document, position)
+			if (flitDefinitions) {
+				debug(flitDefinitions)
+				return flitDefinitions
+			}
+		}
+
+		return undefined
 	}
 
 	getCompletionsAtPosition(context: TemplateContext, position: ts.LineAndCharacter): ts.CompletionInfo {
 		this.documentProvider.updateContext(context)
-		let completions = this.getVSCodeCompletionItems(position)
+		let document = this.documentProvider.getDocumentAt(position)
 
+		if (document.languageId === 'html') {
+			let flitCompletions = this.flitService.getCompletions(document, position)
+			if (flitCompletions) {
+				return flitCompletions
+			}
+		}
+
+		let completions = this.getVSCodeCompletionItems(document, position)
 		return this.translater.translateCompletion(completions, context)
 	}
 
-	private getVSCodeCompletionItems(position: ts.LineAndCharacter) {
+	getCompletionEntryDetails(context: TemplateContext, position: ts.LineAndCharacter, name: string): ts.CompletionEntryDetails {
+		this.documentProvider.updateContext(context)
 		let document = this.documentProvider.getDocumentAt(position)
+
+		if (document.languageId === 'html') {
+			let flitCompletions = this.flitService.getCompletions(document, position)
+			if (flitCompletions) {
+				let flitCompletionEntry = flitCompletions.entries.find(entry => entry.name == name)
+				if (flitCompletionEntry) {
+					return this.translater.convertTSCompletionEntryToEntryDetails(flitCompletionEntry)
+				}
+			}
+		}
+
+		let completions = this.getVSCodeCompletionItems(document, position)
+		let item = completions.items.find(x => x.label === name)
+		if (!item) {
+			item = {label: name}
+		}
+
+		return this.translater.translateCompletionToEntryDetails(item)
+	}
+
+
+	private getVSCodeCompletionItems(document: TextDocument, position: ts.LineAndCharacter) {
 		let completions: vscode.CompletionList
 
 		let emptyCompletionList: vscode.CompletionList = {
@@ -61,27 +103,8 @@ export class TemplateLanguageServiceRouter implements TemplateLanguageService {
 		else {
 			completions = emptyCompletionList
 		}
-		
-		if (document.languageId === 'html') {
-			let flitCompletions = this.flitService.getCompletions(document, position)
-			if (flitCompletions) {
-				completions.items.push(...flitCompletions.items)
-			}
-		}
 
 		return completions
-	}
-
-	getCompletionEntryDetails(context: TemplateContext, position: ts.LineAndCharacter, name: string): ts.CompletionEntryDetails {
-		this.documentProvider.updateContext(context)
-
-		let completions = this.getVSCodeCompletionItems(position)
-		let item = completions.items.find(x => x.label === name)
-		if (!item) {
-			item = {label: name}
-		}
-
-		return this.translater.translateCompletionToEntryDetails(item)
 	}
 
 	getQuickInfoAtPosition(context: TemplateContext, position: ts.LineAndCharacter ): ts.QuickInfo | undefined {
@@ -91,6 +114,11 @@ export class TemplateLanguageServiceRouter implements TemplateLanguageService {
 
 		if (document.languageId === 'html') {
 			let htmlDocument = this.documentProvider.getHTMLDocument()
+			let tsHover = this.flitService.getQuickInfo(document, position)
+			if (tsHover) {
+				return tsHover
+			}
+
 			hover = this.htmlLanguageService.doHover(document, position, htmlDocument)
 		}
 		else if (document.languageId === 'css') {
@@ -141,10 +169,10 @@ export class TemplateLanguageServiceRouter implements TemplateLanguageService {
 
 		if (document.languageId === 'css') {
 			let stylesheet = this.documentProvider.getStylesheet()
-			let range = this.toVsRange(context, start, end)
+			let range = this.translater.toVsRange(context, start, end)
 
 			let diagnostics = this.cssLanguageService.doValidation(document, stylesheet)
-				.filter(diagnostic => this.isRangeOverlaps(diagnostic.range, range))
+				.filter(diagnostic => this.translater.isVSRangeOverlaps(diagnostic.range, range))
 
 			let codeActions = this.cssLanguageService.doCodeActions(document, range, { diagnostics }, stylesheet)
 
@@ -156,21 +184,6 @@ export class TemplateLanguageServiceRouter implements TemplateLanguageService {
 		else {
 			return []
 		}
-	}
-
-	private toVsRange(context: TemplateContext, start: number, end: number): vscode.Range {
-		return {
-			start: context.toPosition(start),
-			end: context.toPosition(end),
-		}
-	}
-
-	private isRangeOverlaps(a: vscode.Range, b: vscode.Range): boolean {
-		return !this.isPositionAfter(a.end, b.start) && !this.isPositionAfter(b.end, a.start)
-	}
-
-	private isPositionAfter(left: vscode.Position, right: vscode.Position): boolean {
-		return right.line > left.line || (right.line === left.line && right.character >= left.character)
 	}
 
 	getReferencesAtPosition(context: TemplateContext, position: ts.LineAndCharacter): ts.ReferenceEntry[] | undefined {

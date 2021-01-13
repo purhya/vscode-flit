@@ -3,7 +3,7 @@ import {getSCSSLanguageService, getCSSLanguageService, LanguageService as CSSLan
 
 /** Uses all scss language service except css completion. */
 export function getFlitCSSLanguageService(): CSSLanguageService {
-	let scssService = Object.assign({}, getSCSSLanguageService())
+	let scssService = {...getSCSSLanguageService()}
 	let cssService = getCSSLanguageService()
 
 	/** Using normal css completion service. */

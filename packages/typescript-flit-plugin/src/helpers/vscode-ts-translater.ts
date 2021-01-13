@@ -7,7 +7,7 @@ import {config} from '../config'
 
 
 /** Reference to https://github.com/microsoft/typescript-styled-plugin/blob/master/src/_language-service.ts */
-export class VSCodeToTSTranslater {
+export class VSCodeTSTranslater {
 
 	constructor(
 		private typescript: typeof ts
@@ -54,11 +54,11 @@ export class VSCodeToTSTranslater {
 
 	translateHover(hover: vscode.Hover, position: ts.LineAndCharacter, context: TemplateContext): ts.QuickInfo {
 		let header: ts.SymbolDisplayPart[] = []
-		let docs: ts.SymbolDisplayPart[] = []
+		let documentation: ts.SymbolDisplayPart[] = []
 
 		let convertPart = (hoverContents: typeof hover.contents) => {
 			if (typeof hoverContents === 'string') {
-				docs.push({kind: 'unknown', text: hoverContents})
+				documentation.push({kind: 'unknown', text: hoverContents})
 			}
 			else if (Array.isArray(hoverContents)) {
 				hoverContents.forEach(convertPart)
@@ -80,7 +80,7 @@ export class VSCodeToTSTranslater {
 				length: hover.range ? context.toOffset(hover.range.end) - start : 1,
 			},
 			displayParts: header,
-			documentation: docs,
+			documentation,
 			tags: [],
 		}
 	}
@@ -150,11 +150,12 @@ export class VSCodeToTSTranslater {
 
 	private translateCompetionEntry(vsItem: vscode.CompletionItem, context: TemplateContext): ts.CompletionEntry {
 		let kind = vsItem.kind ? this.translateionCompletionItemKind(vsItem.kind) : this.typescript.ScriptElementKind.unknown
+		let name = this.removeSnippet(vsItem.label)
 
 		let entry: ts.CompletionEntry = {
 			name: this.removeSnippet(vsItem.label),
 			kind,
-			sortText: '0',
+			sortText: name,
 		}
 
 		if (vsItem.textEdit) {
@@ -187,7 +188,7 @@ export class VSCodeToTSTranslater {
 		} 
 	}
 
-	private toDisplayParts(text: string | vscode.MarkupContent | undefined): ts.SymbolDisplayPart[] {
+	toDisplayParts(text: string | vscode.MarkupContent | undefined): ts.SymbolDisplayPart[] {
 		if (!text) {
 			return []
 		}
@@ -264,5 +265,32 @@ export class VSCodeToTSTranslater {
 	translateDiagnostics(diagnostics: vscode.Diagnostic[], document: TextDocument, context: TemplateContext ): ts.Diagnostic[] {
 		let sourceFile = context.node.getSourceFile()
 		return diagnostics.map(diag => this.translateDiagnostic(diag, sourceFile, document, context)).filter(v => v) as ts.Diagnostic[]
+	}
+
+	
+	toVsRange(context: TemplateContext, start: number, end: number): vscode.Range {
+		return {
+			start: context.toPosition(start),
+			end: context.toPosition(end),
+		}
+	}
+
+	isVSRangeOverlaps(a: vscode.Range, b: vscode.Range): boolean {
+		return !this.isVSPositionAfter(a.end, b.start) && !this.isVSPositionAfter(b.end, a.start)
+	}
+
+	private isVSPositionAfter(left: vscode.Position, right: vscode.Position): boolean {
+		return right.line > left.line || (right.line === left.line && right.character >= left.character)
+	}
+
+	convertTSCompletionEntryToEntryDetails(entry: ts.CompletionEntry): ts.CompletionEntryDetails {
+		return {
+			name: entry.name,
+			kindModifiers: entry.kindModifiers || 'declare',
+			kind: entry.kind,
+			displayParts: [],
+			documentation: [],
+			tags: [],
+		}
 	}
 }

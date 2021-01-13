@@ -1,18 +1,20 @@
 import {LanguageService as HTMLLanguageService, TokenType} from 'vscode-html-languageservice'
 import {TextDocument} from 'vscode-languageserver-textdocument'
-import * as vscode from 'vscode-languageserver-types'
 
 
 export interface FlitToken {
 	type: FlitTokenType
+	text: string
+	prefix: string
 	value: string
 	tagName: string
-	range: vscode.Range
+	start: number
+	end: number
 }
 
 export enum FlitTokenType {
 	StartTagOpen,
-	Tag,
+	StartTag,
 	Binding,
 	Property,
 	DomEvent,
@@ -49,27 +51,34 @@ export class FlitTokenScanner {
 		}
 
 		let type: FlitTokenType | null = null
-		let value = scanner.getTokenText()
+		let text = scanner.getTokenText()
+		let prefix = ''
+		let value = text
 
 		if (token === TokenType.StartTagOpen) {
 			type = FlitTokenType.StartTagOpen
 			tagName = ''
+			value = ''
 		}
 		else if (token === TokenType.StartTag) {
-			type = FlitTokenType.Tag
+			type = FlitTokenType.StartTag
 		}
 		else if (token === TokenType.AttributeName && tagName !== null) {
 			if (value[0] === ':') {
 				type = FlitTokenType.Binding
+				prefix = value[0]
 			}
 			else if (value[0] === '.') {
 				type = FlitTokenType.Property
+				prefix = value[0]
 			}
 			else if (value[0] === '@' && value[1] === '@') {
 				type = FlitTokenType.DomEvent
+				prefix = value.slice(2)
 			}
 			else if (value[0] === '@') {
 				type = FlitTokenType.Event
+				prefix = value[0]
 			}
 		}
 		
@@ -81,13 +90,14 @@ export class FlitTokenScanner {
 				start = end
 			}
 			
-			let range = vscode.Range.create(document.positionAt(start), document.positionAt(end))
-
 			return {
 				type,
+				text,
+				prefix,
 				value,
 				tagName,
-				range,
+				start,
+				end,
 			}
 		}
 

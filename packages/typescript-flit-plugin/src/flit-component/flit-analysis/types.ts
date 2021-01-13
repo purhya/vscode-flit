@@ -6,14 +6,14 @@ export interface FlitComponent {
 	/** Node of it's defined name. */
 	nameNode: ts.Node | null
 
-	/** Description is just leading comment. */
-	description: string | null
-
-	/** Source file in. */
-	sourceFile: ts.SourceFile
-
 	/** Defined declaration in `define(..., declaration)`. */
 	declaration: ts.ClassLikeDeclaration
+
+	/** Type of component. */
+	type: ts.Type
+
+	/** Description is just leading comment. */
+	description: string | null
 
 	/** Component public properties, not include properties of super class. */
 	properties: Map<string, FlitProperty>
@@ -23,10 +23,13 @@ export interface FlitComponent {
 
 	/** Direct super class, discovered from `... extends SuperClass`, not been resolved with super class chain. */
 	heritages: FlitComponent[]
+
+	/** Source file in. */
+	sourceFile: ts.SourceFile
 }
 
 
-export interface FlitBaseItem {
+interface FlitBaseItem {
 
 	/** Defined name in `define(name, ...)`. */
 	name: string
@@ -36,6 +39,9 @@ export interface FlitBaseItem {
 
 	/** Description is just leading comment. */
 	description: string | null
+
+	/** Type of item. */
+	type: ts.Type
 
 	/** Source file in. */
 	sourceFile: ts.SourceFile

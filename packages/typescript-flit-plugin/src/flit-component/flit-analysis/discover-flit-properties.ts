@@ -4,11 +4,11 @@ import {FlitProperty} from './types'
 
 
 /** Discovers public properties from class or interface. */
-export function discoverFlitProperties(declaration: ts.ClassLikeDeclaration, typescript: typeof ts): FlitProperty[] {
+export function discoverFlitProperties(declaration: ts.ClassLikeDeclaration, typescript: typeof ts, checker: ts.TypeChecker): FlitProperty[] {
 	let properties: FlitProperty[] = []
 
 	for (let member of declaration.members) {
-		let property = matchFlitComponentProperty(member, typescript)
+		let property = matchFlitComponentProperty(member, typescript, checker)
 		if (property) {
 			properties.push(property)
 		}
@@ -19,7 +19,7 @@ export function discoverFlitProperties(declaration: ts.ClassLikeDeclaration, typ
 
 
 /** Matches class properties from child nodes of a class declaration node. */
-function matchFlitComponentProperty(node: ts.Node, typescript: typeof ts): FlitProperty | null {
+function matchFlitComponentProperty(node: ts.Node, typescript: typeof ts, checker: ts.TypeChecker): FlitProperty | null {
 	// `class {property = value}`
 	if (typescript.isPropertyDeclaration(node) || typescript.isPropertySignature(node)) {
 		if (typescript.isIdentifier(node.name) || typescript.isStringLiteralLike(node.name)) {
@@ -29,6 +29,7 @@ function matchFlitComponentProperty(node: ts.Node, typescript: typeof ts): FlitP
 				return {
 					name: node.name.getText(),
 					nameNode: node,
+					type: checker.getTypeAtLocation(node),
 					description: getNodeDescription(node),
 					sourceFile: node.getSourceFile(),
 				}
@@ -39,9 +40,13 @@ function matchFlitComponentProperty(node: ts.Node, typescript: typeof ts): FlitP
 	// `class {set property(value)}`
 	else if (typescript.isSetAccessor(node)) {
 		if (typescript.isIdentifier(node.name)) {
+			let firstParameter = node.parameters.length > 0 ? node.parameters[0] : null
+			let type = checker.getTypeAtLocation(firstParameter || node)
+
 			return{
 				name: node.name.getText(),
 				nameNode: node,
+				type,
 				description: getNodeDescription(node),
 				sourceFile: node.getSourceFile(),
 			}

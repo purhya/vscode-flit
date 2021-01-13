@@ -1,18 +1,27 @@
 import * as ts from 'typescript/lib/tsserverlibrary'
-import {discoverFlitBindings, discoverFlitComponents} from './flit-discover/discover-flit-components'
-import {discoverFlitEvents} from './flit-discover/discover-flit-events'
-import {discoverFlitInheritance} from './flit-discover/discover-flit-inheritance'
-import {discoverFlitProperties} from './flit-discover/discover-flit-properties'
-import {FlitBinding, FlitComponent, FlitEvent, FlitProperty} from './flit-discover/types'
-import {getNodeDescription} from './ts-utils/ast-utils'
+import {discoverFlitBindings, discoverFlitComponents} from './discover-flit-components'
+import {discoverFlitEvents} from './discover-flit-events'
+import {discoverFlitInheritance} from './discover-flit-inheritance'
+import {discoverFlitProperties} from './discover-flit-properties'
+import {FlitBinding, FlitComponent, FlitEvent, FlitProperty} from './types'
+import {getNodeDescription} from '../ts-utils/ast-utils'
 
 
 export class FlitAnalyzer {
 
-	private components: Map<ts.Declaration, FlitComponent> = new Map()
-	private bindings: Map<string, FlitBinding> = new Map()
-	private files: Set<ts.SourceFile> = new Set()
 	private tsService: ts.LanguageService
+
+	/** Last analysised source files. */
+	private files: Set<ts.SourceFile> = new Set()
+
+	/** Analysised components. */
+	private components: Map<ts.Declaration, FlitComponent> = new Map()
+
+	/** Analysised bindings. */
+	private bindings: Map<string, FlitBinding> = new Map()
+
+	/** Analysised components, but heritages not been analysised because expired or can't been resolved. */
+	private notResolvedHeritagesComponents: Set<FlitComponent> = new Set()
 
 	constructor(
 		private typescript: typeof ts,
@@ -29,23 +38,35 @@ export class FlitAnalyzer {
 		return this.program.getTypeChecker()
 	}
 
+	/** Format type to a readable description. */
+	getTypeDescription(type: ts.Type) {
+		return this.typeChecker.typeToString(type)
+	}
+
 	/** Update to makesure reloading changed source files. */
 	update() {
-		let {changedFiles, expiredFiles} = this.getChangedAndExpiredFiles()
-		let heritagesExpiredComponent = this.makeFilesExpire(expiredFiles)
+		let changedFiles = this.getChangedAndExpiredFiles()
 
 		for (let file of changedFiles) {
 			this.analysisTSFile(file)
 		}
 
-		for (let component of heritagesExpiredComponent) {
-			component.heritages = this.analysisAndGetHeritages(component.declaration, component.sourceFile)
+		// If `extends XXX` can't been resolved, keeps it in `notResolvedHeritagesComponents` and check it every time.
+		if (changedFiles.size > 0) {
+			for (let component of [...this.notResolvedHeritagesComponents]) {
+				let heritages = this.analysisAndGetHeritages(component.declaration, component.sourceFile)
+				if (heritages) {
+					component.heritages = this.analysisAndGetHeritages(component.declaration, component.sourceFile)
+					this.notResolvedHeritagesComponents.delete(component)
+				}
+			}
 		}
 	}
 
 	/** Get changed or new files but exclude `lib.???.d.ts`. */
 	private getChangedAndExpiredFiles() {
-		let newFiles = new Set(
+		// All files exclude typescript lib files.
+		let allFiles = new Set(
 			this.program.getSourceFiles()
 				.filter(file => !/lib\.[^\\\/]+\.d\.ts$/.test(file.fileName) && file.fileName.includes('checkbox'))
 		)
@@ -53,47 +74,48 @@ export class FlitAnalyzer {
 		let changedFiles: Set<ts.SourceFile> = new Set()
 		let expiredFiles: Set<ts.SourceFile> = new Set()
 
-		for (let file of newFiles) {
+		for (let file of allFiles) {
 			if (!this.files.has(file)) {
 				changedFiles.add(file)
 			}
 		}
 
 		for (let file of this.files) {
-			if (!newFiles.has(file)) {
+			if (!allFiles.has(file)) {
 				expiredFiles.add(file)
 			}
 		}
 
-		this.files = newFiles
+		this.makeFilesExpire(expiredFiles)
+		this.files = allFiles
 
-		return {changedFiles, expiredFiles}
+		return changedFiles
 	}
 
 	/** Make parsed results in given files expired. */
 	private makeFilesExpire(files: Set<ts.SourceFile>) {
-		let heritagesExpired: Set<FlitComponent> = new Set()
-
+		// Defined component expired.
 		for (let [declaration, component] of [...this.components.entries()]) {
 			if (files.has(component.sourceFile)) {
 				this.components.delete(declaration)
+				this.notResolvedHeritagesComponents.delete(component)
 			}
 		}
 
+		// Heritages expired.
 		for (let component of this.components.values()) {
 			if (component.heritages && component.heritages.some(heritage => files.has(heritage.sourceFile))) {
 				component.heritages = []
-				heritagesExpired.add(component)
+				this.notResolvedHeritagesComponents.add(component)
 			}
 		}
 
+		// Binding expired.
 		for (let [bindingName, binding] of [...this.bindings.entries()]) {
 			if (files.has(binding.sourceFile)) {
 				this.bindings.delete(bindingName)
 			}
 		}
-
-		return heritagesExpired
 	}
 
 	/** Analysis each ts file. */
@@ -136,7 +158,7 @@ export class FlitAnalyzer {
 		let properties: Map<string, FlitProperty> = new Map()
 		let events: Map<string, FlitEvent> = new Map()
 
-		for (let property of discoverFlitProperties(declaration, this.typescript)) {
+		for (let property of discoverFlitProperties(declaration, this.typescript, this.typeChecker)) {
 			properties.set(property.name, property)
 		}
 
@@ -146,15 +168,16 @@ export class FlitAnalyzer {
 		
 		let heritages = this.analysisAndGetHeritages(declaration, sourceFile)
 
-		let component = {
+		let component: FlitComponent = {
 			name: null,
 			nameNode: null,
-			description: getNodeDescription(declaration),
-			sourceFile,
 			declaration,
+			type: this.typeChecker.getTypeAtLocation(declaration),
+			description: getNodeDescription(declaration),
 			properties,
 			events,
 			heritages,
+			sourceFile,
 		}
 
 		this.components.set(declaration, component)
@@ -177,12 +200,13 @@ export class FlitAnalyzer {
 	
 	/** Analysis one binding declaration. */
 	private analysisBinding(name: string, nameNode: ts.Node, declaration: ts.Declaration, sourceFile: ts.SourceFile) {
-		let binding = {
+		let binding: FlitBinding = {
 			name,
 			nameNode,
+			declaration,
+			type: this.typeChecker.getTypeAtLocation(declaration),
 			description: getNodeDescription(declaration),
 			sourceFile,
-			declaration,
 		}
 
 		this.bindings.set(name, binding)
@@ -190,9 +214,15 @@ export class FlitAnalyzer {
 
 	/** Get components that name starts with label. */
 	getComponentsForCompletion(label: string): FlitComponent[] {
-		return [...this.components.values()].filter(component => {
-			return component.name?.startsWith(label)
-		})
+		let components: FlitComponent[] = []
+
+		for (let component of this.components.values()) {
+			if (component.name?.startsWith(label)) {
+				components.push(component)
+			}
+		}
+
+		return components
 	}
 
 	/** Get bindings that name starts with label. */
@@ -214,12 +244,27 @@ export class FlitAnalyzer {
 		if (!component) {
 			return null
 		}
+		
+		let properties: Map<string, FlitProperty> = new Map()
 
-		let properties = [...component.properties.values()].filter(property => {
-			return property.name.startsWith(label)
-		})
+		for (let com of this.walkComponents(component)) {
+			for (let property of com.properties.values()) {
+				if (property.name.startsWith(label) && !properties.has(property.name)) {
+					properties.set(property.name, property)
+				}
+			}
+		}
 
-		return properties
+		return [...properties.values()]
+	}
+
+	/** Walk component and it's heritages. */
+	private *walkComponents(component: FlitComponent, deep = 0): Generator<FlitComponent> {
+		yield component
+
+		for (let heritage of component.heritages) {
+			yield *this.walkComponents(heritage, deep + 1)
+		}
 	}
 
 	/** Get properties for component defined with `tagName`, and property starts with label. */
@@ -229,10 +274,74 @@ export class FlitAnalyzer {
 			return null
 		}
 
-		let events = [...component.events.values()].filter(event => {
-			return event.name.startsWith(label)
-		})
+		let events: Map<string, FlitEvent> = new Map()
 
-		return events
+		for (let com of this.walkComponents(component)) {
+			for (let event of com.events.values()) {
+				if (event.name.startsWith(label) && !events.has(event.name)) {
+					events.set(event.name, event)
+				}
+			}
+		}
+
+		return [...events.values()]
+	}
+
+	/** Get components that name starts with label. */
+	getComponent(label: string): FlitComponent | null {
+		for (let component of this.components.values()) {
+			if (component.name === label) {
+				return component
+			}
+		}
+		
+		return null
+	}
+
+	/** Get bindings that name starts with label. */
+	getBinding(label: string): FlitBinding | null {
+		for (let binding of this.bindings.values()) {
+			if (binding.name === label) {
+				return binding
+			}
+		}
+
+		return null
+	}
+
+	/** Get properties for component defined with `tagName`, and property starts with label. */
+	getComponentProperty(label: string, tagName: string): FlitProperty | null {
+		let component = [...this.components.values()].find(component => component.name === tagName)
+		if (!component) {
+			return null
+		}
+	
+		for (let com of this.walkComponents(component)) {
+			for (let property of com.properties.values()) {
+				if (property.name === label) {
+					return property
+				}
+			}
+		}
+
+		return null
+	}
+
+	/** Get properties for component defined with `tagName`, and property starts with label. */
+	getComponentEvent(label: string, tagName: string): FlitEvent | null {
+		let component = [...this.components.values()].find(component => component.name === tagName)
+		if (!component) {
+			return null
+		}
+
+		for (let com of this.walkComponents(component)) {
+			for (let event of com.events.values()) {
+				if (event.name === label) {
+					return event
+				}
+			}
+		}
+
+		return null
 	}
 }

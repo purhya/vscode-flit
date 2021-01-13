@@ -58,7 +58,7 @@ function discoverFlitEvent(node: ts.TypeNode, typescript: typeof ts, checker: ts
 
 			for (let declration of declrations) {
 				if (typescript.isInterfaceDeclaration(declration)) {
-					events.push(...discoverFlitInterfaceProperties(declration, typescript))
+					events.push(...discoverFlitInterfaceProperties(declration, typescript, checker))
 				}
 			}
 		}
@@ -69,11 +69,11 @@ function discoverFlitEvent(node: ts.TypeNode, typescript: typeof ts, checker: ts
 
 
 /** Discovers public properties from interface. */
-function discoverFlitInterfaceProperties(declaration: ts.InterfaceDeclaration, typescript: typeof ts): FlitEvent[] {
+function discoverFlitInterfaceProperties(declaration: ts.InterfaceDeclaration, typescript: typeof ts, checker: ts.TypeChecker): FlitEvent[] {
 	let events: FlitEvent[] = []
 
 	for (let member of declaration.members) {
-		let property = matchFlitInterfaceProperty(member, typescript)
+		let property = matchFlitInterfaceProperty(member, typescript, checker)
 		if (property) {
 			events.push(property)
 		}
@@ -84,13 +84,14 @@ function discoverFlitInterfaceProperties(declaration: ts.InterfaceDeclaration, t
 
 
 /** Matches interface properties. */
-function matchFlitInterfaceProperty(node: ts.Node, typescript: typeof ts): FlitEvent | null {
+function matchFlitInterfaceProperty(node: ts.Node, typescript: typeof ts, checker: ts.TypeChecker): FlitEvent | null {
 	// interface {property: Type}`
 	if (typescript.isPropertySignature(node)) {
 		if (typescript.isIdentifier(node.name) || typescript.isStringLiteralLike(node.name)) {
 			return {
 				name: node.name.getText(),
 				nameNode: node,
+				type: checker.getTypeAtLocation(node),
 				description: getNodeDescription(node),
 				sourceFile: node.getSourceFile(),
 			}
