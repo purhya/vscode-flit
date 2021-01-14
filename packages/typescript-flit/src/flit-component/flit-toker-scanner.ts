@@ -3,12 +3,26 @@ import {TextDocument} from 'vscode-languageserver-textdocument'
 
 
 export interface FlitToken {
+
+	/** Type of token. */
 	type: FlitTokenType
+
+	/** Token text like `.property`. */
 	text: string
+
+	/** Token prefix like `.`, `@`, `:`. */
 	prefix: string
+
+	/** Token value with token prefix. */
 	value: string
+
+	/** Tag name current token inside of. */
 	tagName: string
+
+	/** Start offset of current token. */
 	start: number
+
+	/** End offset of current token. */
 	end: number
 }
 
@@ -18,7 +32,7 @@ export enum FlitTokenType {
 	Binding,
 	Property,
 	DomEvent,
-	Event,
+	ComEvent,
 }
 
 
@@ -64,27 +78,28 @@ export class FlitTokenScanner {
 			type = FlitTokenType.StartTag
 		}
 		else if (token === TokenType.AttributeName && tagName !== null) {
-			if (value[0] === ':') {
+			if (text[0] === ':') {
 				type = FlitTokenType.Binding
-				prefix = value[0]
+				prefix = ':'
 			}
-			else if (value[0] === '.') {
+			else if (text[0] === '.') {
 				type = FlitTokenType.Property
-				prefix = value[0]
+				prefix = '.'
 			}
-			else if (value[0] === '@' && value[1] === '@') {
+			else if (text[0] === '@' && text[1] === '@') {
+				type = FlitTokenType.ComEvent
+				prefix = '@@'
+			}
+			else if (text[0] === '@') {
 				type = FlitTokenType.DomEvent
-				prefix = value.slice(2)
-			}
-			else if (value[0] === '@') {
-				type = FlitTokenType.Event
-				prefix = value[0]
+				prefix = '@'
 			}
 		}
 		
 		if (type !== null) {
 			let end = scanner.getTokenEnd()
 			let start = scanner.getTokenOffset()
+			value = text.slice(prefix.length)
 
 			if (type === FlitTokenType.StartTagOpen) {
 				start = end

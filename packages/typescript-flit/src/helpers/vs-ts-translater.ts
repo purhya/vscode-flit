@@ -23,7 +23,7 @@ export class VSCodeTSTranslater {
 
 		let start = context.localOffsetAt(diagnostic.range.start)
 		let length = context.localOffsetAt(diagnostic.range.end) - start
-		let code = typeof diagnostic.code === 'number' ? diagnostic.code : 9999
+		let code = typeof diagnostic.code === 'number' ? diagnostic.code : 0
 		
 		return {
 			code,

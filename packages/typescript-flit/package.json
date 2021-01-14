@@ -1,5 +1,5 @@
 {
-	"name": "vscode-flit-typescript-plugin",
+	"name": "typescript-flit",
 	"version": "1.0.0",
 	"description": "TypeScript language service plugin for flit",
 	"main": "out/index.js",

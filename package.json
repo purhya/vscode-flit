@@ -108,20 +108,21 @@
 		],
 		"typescriptServerPlugins": [
 			{
-				"name": "typescript-flit-plugin",
+				"name": "typescript-flit",
 				"enableForWorkspaceTypeScriptVersions": true
 			}
 		]
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run build-all",
-		"build-all": "cd packages/typescript-flit-plugin && npm run build && cd ../.. && npm run build",
-		"watch-typescript-flit-plugin": "cd packages/typescript-flit-plugin && npm run watch",
+		"build-all": "cd packages/typescript-flit && npm run build && cd ../.. && npm run build",
+		"watch-typescript-flit": "cd packages/typescript-flit && npm run watch",
 		"build": "tsc -b",
-		"watch": "tsc -b -w"
+		"watch": "tsc -b -w",
+		"link": "mklink /j \"node_modules/typescript-flit\" \"packages/typescript-flit\""
 	},
 	"dependencies": {
-		"typescript-flit-plugin": "*"
+		"typescript-flit": "*"
 	},
 	"devDependencies": {
 		"typescript": "^3.9.5",

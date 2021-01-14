@@ -5,6 +5,7 @@ import {FlitAnalyzer} from './flit-analysis/flit-analyzer'
 import {TextDocument} from 'vscode-languageserver-textdocument'
 import {DomElementEvents} from '../helpers/dom-element-events'
 import {getNodeIdentifier, getNodeName} from '../ts-utils/ast-utils'
+import {debug} from '../helpers/logger'
 
 
 /** Provide flit language service. */
@@ -33,6 +34,7 @@ export class FlitService {
 			return null
 		}
 
+		debug(token)
 		this.beFresh()
 
 		// <
@@ -49,39 +51,35 @@ export class FlitService {
 
 		// :xxx
 		else if (token.type === FlitTokenType.Binding) {
-			let attributeName = token.value.slice(1)
-			let bindings = this.analyzer.getBindingsForCompletion(attributeName)
-
+			let bindings = this.analyzer.getBindingsForCompletion(token.value)
 			return this.makeCompletionInfo(bindings, token, '=${}')
 		}
 
 		// .xxx
 		else if (token.type === FlitTokenType.Property) {
-			let attributeName = token.value.slice(1)
-			let properties = this.analyzer.getComponentPropertiesForCompletion(attributeName, token.tagName) || []
-
+			let properties = this.analyzer.getComponentPropertiesForCompletion(token.value, token.tagName) || []
 			return this.makeCompletionInfo(properties, token, '=${}')
 		}
 
 		// @xxx
-		else if (token.type === FlitTokenType.Event) {
-			let attributeName = token.value.slice(1)
+		else if (token.type === FlitTokenType.DomEvent) {
+			let domEvents = this.getDomEventsItems(token.value)
 
 			if (token.tagName.includes('-')) {
-				let events = this.analyzer.getComponentEventsForCompletion(attributeName, token.tagName) || []
-				return this.makeCompletionInfo(events, token, '=${}')
+				let comEvents = this.analyzer.getComponentEventsForCompletion(token.value, token.tagName) || []
+				comEvents.forEach(item => item.name = '@' + item.name)
+
+				return this.makeCompletionInfo([...domEvents, ...comEvents, ], token, '=${}')
 			}
 			else {
-				let domEvents = this.getDomEventsItems(attributeName)
-				token.prefix = '@@'
+				let domEvents = this.getDomEventsItems(token.value)
 				return this.makeCompletionInfo(domEvents, token, '=${}')
 			}
 		}
 
 		// @@xxx
-		else if (token.type === FlitTokenType.DomEvent) {
-			let attributeName = token.value.slice(2)
-			let domEvents = this.getDomEventsItems(attributeName)
+		else if (token.type === FlitTokenType.ComEvent) {
+			let domEvents = this.getDomEventsItems(token.value)
 			return this.makeCompletionInfo(domEvents, token, '=${}')
 		}
 
@@ -105,7 +103,7 @@ export class FlitService {
 			return {
 				name,
 				kind,
-				sortText: name,
+				sortText: item.name,
 				insertText: name + suffix,
 				replacementSpan,
 			}
@@ -138,6 +136,7 @@ export class FlitService {
 			return null
 		}
 
+		debug(token)
 		this.beFresh()
 		
 		// tag
@@ -148,39 +147,31 @@ export class FlitService {
 
 		// :xxx
 		else if (token.type === FlitTokenType.Binding) {
-			let attributeName = token.value.slice(1)
-			let binding = this.analyzer.getBinding(attributeName)
-
+			let binding = this.analyzer.getBinding(token.value)
 			return this.makeQuickInfo(binding, token)
 		}
 
 		// .xxx
 		else if (token.type === FlitTokenType.Property) {
-			let attributeName = token.value.slice(1)
-			let property = this.analyzer.getComponentProperty(attributeName, token.tagName)
-
+			let property = this.analyzer.getComponentProperty(token.value, token.tagName)
 			return this.makeQuickInfo(property, token)
 		}
 
 		// @xxx
-		else if (token.type === FlitTokenType.Event) {
-			let attributeName = token.value.slice(1)
-
+		else if (token.type === FlitTokenType.ComEvent) {
 			if (token.tagName.includes('-')) {
-				let event = this.analyzer.getComponentEvent(attributeName, token.tagName)
+				let event = this.analyzer.getComponentEvent(token.value, token.tagName)
 				return this.makeQuickInfo(event, token)
 			}
 			else {
-				let domEvent = this.getDomEventItem(attributeName)
+				let domEvent = this.getDomEventItem(token.value)
 				return this.makeQuickInfo(domEvent, token)
 			}
 		}
 
 		// @@xxx
 		else if (token.type === FlitTokenType.DomEvent) {
-			let attributeName = token.value.slice(2)
-			let domEvent = this.getDomEventItem(attributeName)
-
+			let domEvent = this.getDomEventItem(token.value)
 			return this.makeQuickInfo(domEvent, token)
 		}
 
@@ -246,7 +237,7 @@ export class FlitService {
 			case FlitTokenType.Property:
 				return this.typescript.ScriptElementKind.memberVariableElement
 
-			case FlitTokenType.Event:
+			case FlitTokenType.ComEvent:
 			case FlitTokenType.DomEvent:
 				return this.typescript.ScriptElementKind.functionElement
 		}
@@ -262,7 +253,7 @@ export class FlitService {
 			case FlitTokenType.Property:
 				return this.typescript.SymbolDisplayPartKind.propertyName
 
-			case FlitTokenType.Event:
+			case FlitTokenType.ComEvent:
 			case FlitTokenType.DomEvent:
 				return this.typescript.SymbolDisplayPartKind.functionName
 		}
@@ -282,6 +273,7 @@ export class FlitService {
 			return null
 		}
 
+		debug(token)
 		this.beFresh()
 		
 		// tag
@@ -292,25 +284,19 @@ export class FlitService {
 
 		// :xxx
 		else if (token.type === FlitTokenType.Binding) {
-			let attributeName = token.value.slice(1)
-			let binding = this.analyzer.getBinding(attributeName)
-
+			let binding = this.analyzer.getBinding(token.value)
 			return this.makeDefinitionInfo(binding, token)
 		}
 
 		// .xxx
 		else if (token.type === FlitTokenType.Property) {
-			let attributeName = token.value.slice(1)
-			let property = this.analyzer.getComponentProperty(attributeName, token.tagName)
-
+			let property = this.analyzer.getComponentProperty(token.value, token.tagName)
 			return this.makeDefinitionInfo(property, token)
 		}
 
 		// @xxx
-		else if (token.type === FlitTokenType.Event) {
-			let attributeName = token.value.slice(1)
-			let event = this.analyzer.getComponentEvent(attributeName, token.tagName)
-
+		else if (token.type === FlitTokenType.ComEvent) {
+			let event = this.analyzer.getComponentEvent(token.value, token.tagName)
 			return this.makeDefinitionInfo(event, token)
 		}
 

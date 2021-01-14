@@ -21,7 +21,7 @@ export class Logger implements Logger {
 
 let latestLogger: Logger
 
-/** It's very complex to pass logger object, so here give a quick log. */
+/** It's very complex to pass logger object, so here give a quick log to print debug info into typescript logs. */
 export function quickLog(message: any) {
 	if (latestLogger) {
 		if (typeof(message) === 'object') {
@@ -34,7 +34,7 @@ export function quickLog(message: any) {
 }
 
 
-/** Print debug info. */
+/** Print debug info into typescript logs. */
 export function debug(message: any) {
 	if (config.debugging) {
 		quickLog(message)
