@@ -18,7 +18,7 @@ interface EmbeddedRegion {
 export class HTMLEmbeddedRegionParser {
 
 	constructor(
-		private languageService: HTMLLanguageService
+		private readonly languageService: HTMLLanguageService
 	) {}
 
 	parse(document: TextDocument) {
@@ -101,7 +101,7 @@ export class HTMLEmbeddedRegions {
 
 	constructor(
 		private document: TextDocument,
-		private regions: EmbeddedRegion[],
+		private regions: EmbeddedRegion[]
 	) {}
 	
 	/** Get language from position, may return `css`, `javascript` or `html`. */
@@ -136,7 +136,7 @@ export class HTMLEmbeddedRegions {
 					lastIndex,
 					region.start,
 					lastSuffix,
-					this.getPrefix(region),
+					this.getPrefix(region)
 				)
 
 				result += content.slice(region.start, region.end)
@@ -150,7 +150,7 @@ export class HTMLEmbeddedRegions {
 			lastIndex,
 			content.length,
 			lastSuffix,
-			'',
+			''
 		)
 
 		return result

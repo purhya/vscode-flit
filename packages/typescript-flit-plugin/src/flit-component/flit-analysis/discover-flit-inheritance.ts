@@ -1,5 +1,5 @@
 import * as ts from 'typescript/lib/tsserverlibrary'
-import {resolveNodeDeclarationsDeep} from '../ts-utils/ast-utils'
+import {resolveNodeDeclarationsDeep} from '../../ts-utils/ast-utils'
 
 
 /** Discovers inheritance from given node by looking at `extends`. */

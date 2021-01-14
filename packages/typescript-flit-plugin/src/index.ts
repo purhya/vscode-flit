@@ -2,10 +2,10 @@ import * as ts from 'typescript/lib/tsserverlibrary'
 import {getLanguageService as getHTMLLanguageService, LanguageService as HTMLLanguageService} from 'vscode-html-languageservice'
 import {LanguageService as CSSLanguageService} from 'vscode-css-languageservice'
 import {config} from './config'
-import {TemplateLanguageServiceRouter} from './template/template-language-service-router'
-import {LanguageServiceLogger} from './helpers/logger'
-import {decorateWithTemplateLanguageService} from 'typescript-template-language-service-decorator'
+import {TemplateLanguageServiceRouter} from './template-service/template-language-service-router'
+import {Logger} from './helpers/logger'
 import {getFlitCSSLanguageService} from './helpers/css-language-service'
+import {decorateWithTemplateLanguageService} from './template-decorator'
 
 
 /** Class as entry of the ts plugin. */
@@ -15,32 +15,32 @@ class HTMLPlugin implements ts.server.PluginModule{
 	private readonly cssLanguageService: CSSLanguageService = getFlitCSSLanguageService()
 
 	/** Avoid decorated ts language server for twice. */
-	private decoratedInfo: WeakMap<ts.LanguageService, ts.LanguageService> = new WeakMap()
+	private decoratedServices: WeakMap<ts.LanguageService, ts.LanguageService> = new WeakMap()
 
 	constructor(
 		private readonly typescript: typeof ts
 	) {}
 
 	create(info: ts.server.PluginCreateInfo): ts.LanguageService {
-		if (this.decoratedInfo.has(info.languageService)) {
-			return this.decoratedInfo.get(info.languageService)!
+		if (this.decoratedServices.has(info.languageService)) {
+			return this.decoratedServices.get(info.languageService)!
 		}
 
-		let languageService = this.createTemplateLanguageService(info)
-		this.decoratedInfo.set(info.languageService, languageService)
+		let decoratedLanguageService = this.createTemplateLanguageService(info)
+		this.decoratedServices.set(info.languageService, decoratedLanguageService)
 
-		return languageService
+		return decoratedLanguageService
 	}
 
 	/** Create the language service to give service for template codes. */
 	private createTemplateLanguageService(info: ts.server.PluginCreateInfo): ts.LanguageService {
-		let logger = new LanguageServiceLogger(info)
+		new Logger(info)
 
 		let templateLanguageService = new TemplateLanguageServiceRouter(
 			this.typescript,
-			info.project,
+			info.languageService,
 			this.htmlLanguageService,
-			this.cssLanguageService,
+			this.cssLanguageService
 		)
 
 		let languageService = decorateWithTemplateLanguageService(
@@ -50,10 +50,8 @@ class HTMLPlugin implements ts.server.PluginModule{
 			templateLanguageService,
 			{
 				tags: config.tags,
-				getSubstitutions: this.getTemplateSubstitutions.bind(this),
-				enableForStringWithSubstitutions: true
-			},
-			{logger},
+				getSubstitutions: this.getTemplateSubstitutions.bind(this)
+			}
 		)
 
 		return languageService

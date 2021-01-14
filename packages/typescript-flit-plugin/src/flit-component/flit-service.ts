@@ -4,7 +4,7 @@ import {LanguageService as HTMLLanguageService} from 'vscode-html-languageservic
 import {FlitAnalyzer} from './flit-analysis/flit-analyzer'
 import {TextDocument} from 'vscode-languageserver-textdocument'
 import {DomElementEvents} from '../helpers/dom-element-events'
-import {getNodeIdentifier, getNodeName} from './ts-utils/ast-utils'
+import {getNodeIdentifier, getNodeName} from '../ts-utils/ast-utils'
 
 
 /** Provide flit language service. */
@@ -14,12 +14,12 @@ export class FlitService {
 	private analyzer: FlitAnalyzer
 
 	constructor(
-		private typescript: typeof ts,
-		project: ts.server.Project,
-		htmlLanguageService: HTMLLanguageService,
+		private readonly typescript: typeof ts,
+		tsLanguageService: ts.LanguageService,
+		htmlLanguageService: HTMLLanguageService
 	) {
 		this.scanner = new FlitTokenScanner(htmlLanguageService)
-		this.analyzer = new FlitAnalyzer(typescript, project)
+		this.analyzer = new FlitAnalyzer(typescript, tsLanguageService)
 	}
 
 	/** Makesure to reload changed source files. */
@@ -189,7 +189,7 @@ export class FlitService {
 	
 	private makeQuickInfo(
 		item: {name: string, type?: ts.Type, description: string | null} | null,
-		token: FlitToken,
+		token: FlitToken
 	): ts.QuickInfo | null{
 		if (!item || (!item.type && !item.description)) {
 			return null
@@ -205,12 +205,18 @@ export class FlitService {
 		let headers: ts.SymbolDisplayPart[] = []
 		let documentation: ts.SymbolDisplayPart[] = []
 
-		if (item.type) {
-			headers.push({
-				kind: this.typescript.SymbolDisplayPartKind[this.getSymbolDisplayPartKindFromToken(token)],
-				text: token.text + ': ' + this.analyzer.getTypeDescription(item.type),
-			})
+		let headerText = token.text
+		if (token.type === FlitTokenType.StartTag) {
+			headerText = '<' + token.text + '>'
 		}
+		if (item.type) {
+			headerText += ': ' + this.analyzer.getTypeDescription(item.type)
+		}
+
+		headers.push({
+			kind: this.typescript.SymbolDisplayPartKind[this.getSymbolDisplayPartKindFromToken(token)],
+			text: headerText,
+		})
 
 		if (item.description) {
 			documentation.push({
@@ -313,7 +319,7 @@ export class FlitService {
 	
 	private makeDefinitionInfo(
 		item: {name: string | null, nameNode: ts.Node | null, declaration?: ts.Declaration} | null,
-		token: FlitToken,
+		token: FlitToken
 	): ts.DefinitionInfoAndBoundSpan | null{
 		if (!item) {
 			return null

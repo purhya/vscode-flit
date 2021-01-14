@@ -1,4 +1,3 @@
-import {Logger} from 'typescript-template-language-service-decorator'
 import {config} from '../config'
 
 
@@ -6,10 +5,10 @@ import {config} from '../config'
  * Provide logger service, can be used to pass from ts service to template language service.
  * See https://github.com/microsoft/TypeScript/wiki/Writing-a-Language-Service-Plugin
  */
-export class LanguageServiceLogger implements Logger {
+export class Logger implements Logger {
 
 	constructor(
-		private info: ts.server.PluginCreateInfo
+		private readonly info: ts.server.PluginCreateInfo
 	) {
 		latestLogger = this
 	}
@@ -20,7 +19,7 @@ export class LanguageServiceLogger implements Logger {
 }
 
 
-let latestLogger: LanguageServiceLogger
+let latestLogger: Logger
 
 /** It's very complex to pass logger object, so here give a quick log. */
 export function quickLog(message: any) {

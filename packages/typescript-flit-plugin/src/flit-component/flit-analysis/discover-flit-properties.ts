@@ -1,5 +1,5 @@
 import * as ts from 'typescript/lib/tsserverlibrary'
-import {getNodeDescription, getNodeMemberVisibility} from '../ts-utils/ast-utils'
+import {getNodeDescription, getNodeMemberVisibility} from '../../ts-utils/ast-utils'
 import {FlitProperty} from './types'
 
 
@@ -42,13 +42,16 @@ function matchFlitComponentProperty(node: ts.Node, typescript: typeof ts, checke
 		if (typescript.isIdentifier(node.name)) {
 			let firstParameter = node.parameters.length > 0 ? node.parameters[0] : null
 			let type = checker.getTypeAtLocation(firstParameter || node)
+			let isPublic = getNodeMemberVisibility(node, typescript) === 'public'
 
-			return{
-				name: node.name.getText(),
-				nameNode: node,
-				type,
-				description: getNodeDescription(node),
-				sourceFile: node.getSourceFile(),
+			if (isPublic) {
+				return{
+					name: node.name.getText(),
+					nameNode: node,
+					type,
+					description: getNodeDescription(node),
+					sourceFile: node.getSourceFile(),
+				}
 			}
 		}
 	}

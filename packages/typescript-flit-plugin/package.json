@@ -4,7 +4,6 @@
 	"description": "TypeScript language service plugin for flit",
 	"main": "out/index.js",
 	"dependencies": {
-		"typescript-template-language-service-decorator": "^2.2.0",
 		"vscode-css-languageservice": "^3.0.13",
 		"vscode-html-languageservice": "^2.1.12",
 		"vscode-languageserver-textdocument": "^1.0.1",

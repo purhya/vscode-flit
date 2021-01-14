@@ -1,6 +1,6 @@
 import * as ts from 'typescript/lib/tsserverlibrary'
-import {resolveNodeValue} from '../ts-utils/resolve-node-value'
-import {matchNodeDescent, resolveNodeDeclarations} from '../ts-utils/ast-utils'
+import {resolveNodeValue} from '../../ts-utils/resolve-node-value'
+import {matchNodeDescentUnNesting, resolveNodeDeclarations} from '../../ts-utils/ast-utils'
 
 
 export interface FlitDefined {
@@ -21,13 +21,13 @@ export interface FlitDefined {
 
 /** Walk and Discover all flit components from a given node and it's children. */
 export function discoverFlitComponents(sourceFile: ts.SourceFile, typescript: typeof ts, checker: ts.TypeChecker): FlitDefined[] {
-	return matchNodeDescent(sourceFile, child => matchFlitDefining(child, 'define', typescript, checker))
+	return matchNodeDescentUnNesting(sourceFile, child => matchFlitDefining(child, 'define', typescript, checker))
 }
 
 
 /** Walk and Discover all flit bindings from a given node and it's children. */
 export function discoverFlitBindings(sourceFile: ts.SourceFile, typescript: typeof ts, checker: ts.TypeChecker): FlitDefined[] {
-	return matchNodeDescent(sourceFile, child => matchFlitDefining(child, 'defineBinding', typescript, checker))
+	return matchNodeDescentUnNesting(sourceFile, child => matchFlitDefining(child, 'defineBinding', typescript, checker))
 }
 
 

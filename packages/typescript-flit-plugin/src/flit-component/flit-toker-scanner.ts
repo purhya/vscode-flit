@@ -25,7 +25,7 @@ export enum FlitTokenType {
 export class FlitTokenScanner {
 
 	constructor(
-		private htmlLanguageService: HTMLLanguageService
+		private readonly htmlLanguageService: HTMLLanguageService
 	) {}
 
 	scanAt(document: TextDocument, position: ts.LineAndCharacter): FlitToken | null {

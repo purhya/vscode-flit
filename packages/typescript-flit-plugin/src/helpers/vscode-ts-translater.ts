@@ -1,29 +1,28 @@
-import {TemplateContext} from 'typescript-template-language-service-decorator'
 import * as ts from 'typescript/lib/tsserverlibrary'
 import {FoldingRange} from 'vscode-html-languageservice'
-import {TextDocument} from 'vscode-languageserver-textdocument'
 import * as vscode from 'vscode-languageserver-types'
 import {config} from '../config'
+import {TemplateContext} from '../template-decorator'
 
 
 /** Reference to https://github.com/microsoft/typescript-styled-plugin/blob/master/src/_language-service.ts */
 export class VSCodeTSTranslater {
 
 	constructor(
-		private typescript: typeof ts
+		private readonly typescript: typeof ts
 	) {}
 
-	private translateDiagnostic(diagnostic: vscode.Diagnostic, file: ts.SourceFile, document: TextDocument, context: TemplateContext): ts.Diagnostic | undefined {
+	private translateDiagnostic(diagnostic: vscode.Diagnostic, file: ts.SourceFile, context: TemplateContext): ts.Diagnostic | undefined {
 		// Make sure returned error is within the real document.
 		if (diagnostic.range.start.line === 0
-			|| diagnostic.range.start.line > document.lineCount
-			|| diagnostic.range.start.character >= document.getText().length
+			|| diagnostic.range.start.line > context.document.lineCount
+			|| diagnostic.range.start.character >= context.document.getText().length
 		) {
 			return undefined
 		}
 
-		let start = context.toOffset(diagnostic.range.start)
-		let length = context.toOffset(diagnostic.range.end) - start
+		let start = context.localOffsetAt(diagnostic.range.start)
+		let length = context.localOffsetAt(diagnostic.range.end) - start
 		let code = typeof diagnostic.code === 'number' ? diagnostic.code : 9999
 		
 		return {
@@ -70,14 +69,14 @@ export class VSCodeTSTranslater {
 
 		convertPart(hover.contents)
 
-		let start = context.toOffset(hover.range ? hover.range.start : position)
+		let start = context.localOffsetAt(hover.range ? hover.range.start : position)
 
 		return {
 			kind: this.typescript.ScriptElementKind.string,
 			kindModifiers: '',
 			textSpan: {
 				start,
-				length: hover.range ? context.toOffset(hover.range.end) - start : 1,
+				length: hover.range ? context.localOffsetAt(hover.range.end) - start : 1,
 			},
 			displayParts: header,
 			documentation,
@@ -85,8 +84,8 @@ export class VSCodeTSTranslater {
 		}
 	}
 
-	translateCodeActions(codeActions: vscode.Command[], context: TemplateContext): ts.CodeAction[] {
-		let actions: ts.CodeAction[] = []
+	translateCodeFixActions(codeActions: vscode.Command[], context: TemplateContext): ts.CodeFixAction[] {
+		let actions: ts.CodeFixAction[] = []
 
 		for (let vsAction of codeActions) {
 			if (vsAction.command !== '_css.applyCodeAction') {
@@ -96,6 +95,7 @@ export class VSCodeTSTranslater {
 			let edits = vsAction.arguments && vsAction.arguments[2] as vscode.TextEdit[]
 			if (edits) {
 				actions.push({
+					fixName: '',
 					description: vsAction.title,
 					changes: edits.map(edit => this.translateTextEditToFileTextChange(context, edit)),
 				})
@@ -106,8 +106,8 @@ export class VSCodeTSTranslater {
 	}
 
 	private translateTextEditToFileTextChange(context: TemplateContext, textEdit: vscode.TextEdit): ts.FileTextChanges {
-		let start = context.toOffset(textEdit.range.start)
-		let end = context.toOffset(textEdit.range.end)
+		let start = context.localOffsetAt(textEdit.range.start)
+		let end = context.localOffsetAt(textEdit.range.end)
 
 		return {
 			fileName: context.fileName,
@@ -122,8 +122,8 @@ export class VSCodeTSTranslater {
 	}
 
 	translateOutliningSpan(range: FoldingRange, context: TemplateContext): ts.OutliningSpan {
-		let startOffset = context.toOffset({line: range.startLine, character: range.startCharacter || 0})
-		let endOffset = context.toOffset({line: range.endLine, character: range.endCharacter || 0})
+		let startOffset = context.localOffsetAt({line: range.startLine, character: range.startCharacter || 0})
+		let endOffset = context.localOffsetAt({line: range.endLine, character: range.endCharacter || 0})
 		
 		let span = {
 			start: startOffset,
@@ -145,6 +145,15 @@ export class VSCodeTSTranslater {
 			isMemberCompletion: false,
 			isNewIdentifierLocation: false,
 			entries: items.items.map(x => this.translateCompetionEntry(x, context)),
+		}
+	}
+
+	getEmptyCompletion(): ts.CompletionInfo {
+		return {
+			isGlobalCompletion: false,
+			isMemberCompletion: false,
+			isNewIdentifierLocation: false,
+			entries: [],
 		}
 	}
 
@@ -253,8 +262,8 @@ export class VSCodeTSTranslater {
 	}
 
 	toTsSpan(range: vscode.Range, context: TemplateContext): ts.TextSpan {
-		let editStart = context.toOffset(range.start)
-		let editEnd = context.toOffset(range.end)
+		let editStart = context.localOffsetAt(range.start)
+		let editEnd = context.localOffsetAt(range.end)
 
 		return {
 			start: editStart,
@@ -262,16 +271,16 @@ export class VSCodeTSTranslater {
 		}
 	}
 
-	translateDiagnostics(diagnostics: vscode.Diagnostic[], document: TextDocument, context: TemplateContext ): ts.Diagnostic[] {
+	translateDiagnostics(diagnostics: vscode.Diagnostic[], context: TemplateContext ): ts.Diagnostic[] {
 		let sourceFile = context.node.getSourceFile()
-		return diagnostics.map(diag => this.translateDiagnostic(diag, sourceFile, document, context)).filter(v => v) as ts.Diagnostic[]
+		return diagnostics.map(diag => this.translateDiagnostic(diag, sourceFile, context)).filter(v => v) as ts.Diagnostic[]
 	}
 
 	
 	toVsRange(context: TemplateContext, start: number, end: number): vscode.Range {
 		return {
-			start: context.toPosition(start),
-			end: context.toPosition(end),
+			start: context.localPositionAt(start),
+			end: context.localPositionAt(end),
 		}
 	}
 
@@ -283,7 +292,7 @@ export class VSCodeTSTranslater {
 		return right.line > left.line || (right.line === left.line && right.character >= left.character)
 	}
 
-	convertTSCompletionEntryToEntryDetails(entry: ts.CompletionEntry): ts.CompletionEntryDetails {
+	translateTSCompletionEntryToEntryDetails(entry: ts.CompletionEntry): ts.CompletionEntryDetails {
 		return {
 			name: entry.name,
 			kindModifiers: entry.kindModifiers || 'declare',
@@ -292,5 +301,37 @@ export class VSCodeTSTranslater {
 			documentation: [],
 			tags: [],
 		}
+	}
+
+	translateHighlightsToGlobalReferenceSymbol(highlights: vscode.DocumentHighlight[], position: vscode.Position, context: TemplateContext): ts.ReferencedSymbol[] {
+		let references: ts.ReferenceEntry[] = highlights.map(highlight => {
+			let textSpan = this.toTsSpan(highlight.range, context)
+			textSpan.start = context.toGlobalOffset(textSpan.start)
+
+			return {
+				isWriteAccess: false,
+        		isDefinition: false,
+				fileName: context.fileName,
+				textSpan,
+			}
+		})
+
+		let definitionSpan: ts.TextSpan = {
+			start: context.toGlobalOffset(context.localOffsetAt(position)),
+			length: 0,
+		}
+
+		return [{
+			definition: {
+				containerKind: this.typescript.ScriptElementKind.string,
+				containerName: '',
+				displayParts: [],
+				fileName: context.fileName,
+				kind: this.typescript.ScriptElementKind.string,
+				name: '',
+				textSpan: definitionSpan,
+			},
+			references,
+		}]
 	}
 }

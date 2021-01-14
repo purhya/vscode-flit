@@ -1,5 +1,5 @@
 import * as ts from 'typescript/lib/tsserverlibrary'
-import {getNodeDescription, resolveNodeDeclarations, splitIntersectionTypes} from '../ts-utils/ast-utils'
+import {getNodeDescription, resolveNodeDeclarations, splitIntersectionTypes} from '../../ts-utils/ast-utils'
 import {FlitEvent} from './types'
 
 

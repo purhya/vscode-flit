@@ -72,7 +72,6 @@ export function hasFlag(num: number, flag: number): boolean {
 
 /** Resolves the declarations of a symbol. A valueDeclaration is always the first entry in the array. */
 function resolveSymbolDeclarations(symbol: ts.Symbol): ts.Declaration[] {
-	// Filters all declarations
 	let valueDeclaration = symbol.valueDeclaration
 	let declarations = symbol.getDeclarations() || []
 
@@ -219,14 +218,28 @@ export function walkNodeDescent(node: ts.Node, callback: (node: ts.Node) => void
 
 
 /** Find a node recursively walking down the children of the tree. */
-export function findNodeDescent<T extends ts.Node = ts.Node>(node: ts.Node, test: (node: ts.Node) => node is T): T | null {
-	if (test(node)) {
+export function findNodeDescent(node: ts.Node, condition: (node: ts.Node) => boolean): ts.Node | null {
+	if (condition(node)) {
 		return node
 	}
 
 	return node.forEachChild(child => {
-		return findNodeDescent(child, test) || undefined
+		return findNodeDescent(child, condition) || undefined
 	}) || null
+}
+
+
+/** Find a node recursively walking up the parent of the tree. */
+export function findNodeAscent(node: ts.Node, condition: (node: ts.Node) => boolean): ts.Node | null {
+	if (condition(node)) {
+		return node
+	}
+
+	if (node.parent) {
+		return findNodeAscent(node.parent, condition)
+	}
+
+	return null
 }
 
 
@@ -234,18 +247,30 @@ export function findNodeDescent<T extends ts.Node = ts.Node>(node: ts.Node, test
  * Filter from multiple children by walking down the children of the tree.
  * Note that will also search children if parent match.
  */
-export function filterNodeDescent<T extends ts.Node = ts.Node>(node: ts.Node, test: (node: ts.Node) => node is T): T[] {
-	let matches: T[] = []
+export function filterNodeDescent(node: ts.Node, condition: (node: ts.Node) => boolean): ts.Node[] {
+	let matches: ts.Node[] = []
 
-	if (test(node)) {
+	if (condition(node)) {
 		matches.push(node)
 	}
 
 	node.forEachChild(child => {
-		matches.push(...filterNodeDescent(child, test))
+		matches.push(...filterNodeDescent(child, condition))
 	})
 
 	return matches
+}
+
+
+/** Get node from source file at specified offset. */
+export function getNodeAtOffset(node: ts.Node, offset: number ): ts.Node | null {
+	if (offset >= node.getStart() && offset < node.getEnd()) {
+		return node.forEachChild(child => {
+			return getNodeAtOffset(child, offset) || undefined
+		}) || node
+	}
+
+	return null
 }
 
 
@@ -253,7 +278,7 @@ export function filterNodeDescent<T extends ts.Node = ts.Node>(node: ts.Node, te
  * Find multiple children by walking down the children of the tree.
  * Note that will skip children if parent match.
  */
-export function matchNodeDescent<T>(node: ts.Node, match: (node: ts.Node) => T | null): T[] {
+export function matchNodeDescentUnNesting<T>(node: ts.Node, match: (node: ts.Node) => T | null): T[] {
 	let results: T[] = []
 	let result = match(node)
 
@@ -262,7 +287,7 @@ export function matchNodeDescent<T>(node: ts.Node, match: (node: ts.Node) => T |
 	}
 	else {
 		node.forEachChild(child => {
-			results.push(...matchNodeDescent(child, match))
+			results.push(...matchNodeDescentUnNesting(child, match))
 		})
 	}
 
@@ -347,4 +372,3 @@ export function splitIntersectionTypes(type: ts.TypeNode, typescript: typeof ts)
 
 	return splitedTypes
 }
-

@@ -4,12 +4,10 @@ import {discoverFlitEvents} from './discover-flit-events'
 import {discoverFlitInheritance} from './discover-flit-inheritance'
 import {discoverFlitProperties} from './discover-flit-properties'
 import {FlitBinding, FlitComponent, FlitEvent, FlitProperty} from './types'
-import {getNodeDescription} from '../ts-utils/ast-utils'
+import {getNodeDescription} from '../../ts-utils/ast-utils'
 
 
 export class FlitAnalyzer {
-
-	private tsService: ts.LanguageService
 
 	/** Last analysised source files. */
 	private files: Set<ts.SourceFile> = new Set()
@@ -24,14 +22,12 @@ export class FlitAnalyzer {
 	private notResolvedHeritagesComponents: Set<FlitComponent> = new Set()
 
 	constructor(
-		private typescript: typeof ts,
-		project: ts.server.Project,
-	) {
-		this.tsService = project.getLanguageService()
-	}
+		private readonly typescript: typeof ts,
+		private readonly tsLanguageService: ts.LanguageService
+	) {}
 
 	get program() {
-		return this.tsService.getProgram()!
+		return this.tsLanguageService.getProgram()!
 	}
 
 	get typeChecker() {
@@ -68,7 +64,7 @@ export class FlitAnalyzer {
 		// All files exclude typescript lib files.
 		let allFiles = new Set(
 			this.program.getSourceFiles()
-				.filter(file => !/lib\.[^\\\/]+\.d\.ts$/.test(file.fileName) && file.fileName.includes('checkbox'))
+				.filter(file => !/lib\.[^\\\/]+\.d\.ts$/.test(file.fileName))
 		)
 
 		let changedFiles: Set<ts.SourceFile> = new Set()
