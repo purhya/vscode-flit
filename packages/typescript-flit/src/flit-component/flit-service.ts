@@ -158,21 +158,15 @@ export class FlitService {
 		}
 
 		// @xxx
-		else if (token.type === FlitTokenType.ComEvent) {
-			if (token.tagName.includes('-')) {
-				let event = this.analyzer.getComponentEvent(token.value, token.tagName)
-				return this.makeQuickInfo(event, token)
-			}
-			else {
-				let domEvent = this.getDomEventItem(token.value)
-				return this.makeQuickInfo(domEvent, token)
-			}
-		}
-
-		// @@xxx
 		else if (token.type === FlitTokenType.DomEvent) {
 			let domEvent = this.getDomEventItem(token.value)
 			return this.makeQuickInfo(domEvent, token)
+		}
+
+		// @@xxx
+		else if (token.type === FlitTokenType.ComEvent) {
+			let comEvent = this.analyzer.getComponentEvent(token.value, token.tagName)
+			return this.makeQuickInfo(comEvent, token)
 		}
 
 		return null
@@ -294,7 +288,7 @@ export class FlitService {
 			return this.makeDefinitionInfo(property, token)
 		}
 
-		// @xxx
+		// @@xxx
 		else if (token.type === FlitTokenType.ComEvent) {
 			let event = this.analyzer.getComponentEvent(token.value, token.tagName)
 			return this.makeDefinitionInfo(event, token)
