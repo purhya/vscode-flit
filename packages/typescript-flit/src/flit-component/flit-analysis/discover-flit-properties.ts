@@ -25,8 +25,9 @@ function matchFlitComponentProperty(node: ts.Node, typescript: typeof ts, checke
 		if (typescript.isIdentifier(node.name) || typescript.isStringLiteralLike(node.name)) {
 			let isPublic = getNodeMemberVisibility(node, typescript) === 'public'
 			let isReadOnly = hasModifierForNode(node, typescript.SyntaxKind.ReadonlyKeyword)
+			let isStatic = hasModifierForNode(node, typescript.SyntaxKind.StaticKeyword)
 
-			if (isPublic && !isReadOnly) {
+			if (isPublic && !isReadOnly && !isStatic) {
 				return {
 					name: node.name.getText(),
 					nameNode: node,
@@ -44,8 +45,9 @@ function matchFlitComponentProperty(node: ts.Node, typescript: typeof ts, checke
 			let firstParameter = node.parameters.length > 0 ? node.parameters[0] : null
 			let type = checker.getTypeAtLocation(firstParameter || node)
 			let isPublic = getNodeMemberVisibility(node, typescript) === 'public'
+			let isStatic = hasModifierForNode(node, typescript.SyntaxKind.StaticKeyword)
 
-			if (isPublic) {
+			if (isPublic && !isStatic) {
 				return{
 					name: node.name.getText(),
 					nameNode: node,

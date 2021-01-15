@@ -58,7 +58,7 @@ export class FlitService {
 		// :xxx
 		else if (token.type === FlitTokenType.Binding) {
 			let bindings = this.analyzer.getBindingsForCompletion(token.value)
-			let info = this.addSuffixProperty(bindings, '=${}')
+			let info = this.addSuffixProperty(bindings, '=')
 			this.fixBindingCompletionInfo(info)
 
 			if (info.length === 0) {
@@ -72,7 +72,7 @@ export class FlitService {
 		// .xxx
 		else if (token.type === FlitTokenType.Property) {
 			let properties = this.analyzer.getComponentPropertiesForCompletion(token.value, token.tagName) || []
-			let info = this.addSuffixProperty(properties, '=${}')
+			let info = this.addSuffixProperty(properties, '=')
 
 			return this.makeCompletionInfo(info, token)
 		}
@@ -84,13 +84,13 @@ export class FlitService {
 			if (token.tagName.includes('-')) {
 				let comEvents = this.analyzer.getComponentEventsForCompletion(token.value, token.tagName) || []
 				let atComEvents = comEvents.map(item => ({name: '@' + item.name, description: item.description}))
-				let info = this.addSuffixProperty([...atComEvents, ...domEvents], '=${}')
+				let info = this.addSuffixProperty([...atComEvents, ...domEvents], '=')
 
 				return this.makeCompletionInfo(info, token)
 			}
 			else {
 				let domEvents = this.getDomEventsItems(token.value)
-				let info = this.addSuffixProperty(domEvents, '=${}')
+				let info = this.addSuffixProperty(domEvents, '=')
 
 				return this.makeCompletionInfo(info, token)
 			}
@@ -99,7 +99,7 @@ export class FlitService {
 		// @@xxx
 		else if (token.type === FlitTokenType.ComEvent) {
 			let comEvents = this.analyzer.getComponentEventsForCompletion(token.value, token.tagName) || []
-			let info = this.addSuffixProperty(comEvents, '=${}')
+			let info = this.addSuffixProperty(comEvents, '=')
 
 			return this.makeCompletionInfo(info, token)
 		}
@@ -120,6 +120,9 @@ export class FlitService {
 			if (item.name === 'class' || FlitBindingModifiers.hasOwnProperty(item.name)) {
 				item.suffix = ''
 			}
+			else if (item.name === 'ref') {
+				item.suffix = '=""'
+			}
 		})
 	}
 
@@ -136,7 +139,7 @@ export class FlitService {
 				token.start += 1 + bindingName.length + modifier.length
 				token.prefix = '.'
 
-				return this.addSuffixProperty(FlitBindingModifiers.style.filter(item => item.name.startsWith(label)), '=${}')
+				return this.addSuffixProperty(FlitBindingModifiers.style.filter(item => item.name.startsWith(label)), '=')
 			}
 
 			// Complete style property.
@@ -154,7 +157,7 @@ export class FlitService {
 			token.start += 1 + bindingName.length
 			token.prefix = '.'
 
-			return this.addSuffixProperty(FlitBindingModifiers.model.filter(item => item.name.startsWith(modifier)), '=${}')
+			return this.addSuffixProperty(FlitBindingModifiers.model.filter(item => item.name.startsWith(modifier)), '=')
 		}
 
 		return []
