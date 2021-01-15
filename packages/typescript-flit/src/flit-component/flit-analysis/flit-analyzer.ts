@@ -1,10 +1,9 @@
 import * as ts from 'typescript/lib/tsserverlibrary'
-import {discoverFlitBindings, discoverFlitComponents} from './discover-flit-components'
+import {discoverFlitBindings, discoverFlitComponents, getFlitDefinedFromComponentDeclaration} from './discover-flit-components-bindings'
 import {discoverFlitEvents} from './discover-flit-events'
-import {discoverFlitInheritance} from './discover-flit-inheritance'
 import {discoverFlitProperties} from './discover-flit-properties'
-import {FlitBinding, FlitComponent, FlitEvent, FlitProperty} from './types'
-import {getNodeDescription} from '../../ts-utils/ast-utils'
+import {FlitBinding, FlitComponent, FlitDefined, FlitEvent, FlitProperty} from './types'
+import {resolveExtendedClasses} from '../../ts-utils/ast-utils'
 
 
 export class FlitAnalyzer {
@@ -41,30 +40,31 @@ export class FlitAnalyzer {
 
 	/** Update to makesure reloading changed source files. */
 	update() {
-		let changedFiles = this.getChangedAndExpiredFiles()
+		let changedFiles = this.getChangedFiles()
 
 		for (let file of changedFiles) {
 			this.analysisTSFile(file)
 		}
 
-		// If `extends XXX` can't been resolved, keeps it in `notResolvedHeritagesComponents` and check it every time.
+		// If `extends XXX` can't been resolved, keep it in `notResolvedHeritagesComponents` and check it every time.
+		// Otherwise we analysis all components, and then their heritages.
 		if (changedFiles.size > 0) {
 			for (let component of [...this.notResolvedHeritagesComponents]) {
-				let heritages = this.analysisAndGetHeritages(component.declaration, component.sourceFile)
-				if (heritages) {
-					component.heritages = this.analysisAndGetHeritages(component.declaration, component.sourceFile)
+				let heritages = this.getHeritages(component.declaration)
+				if (heritages.length > 0) {
+					component.heritages = heritages
 					this.notResolvedHeritagesComponents.delete(component)
 				}
 			}
 		}
 	}
 
-	/** Get changed or new files but exclude `lib.???.d.ts`. */
-	private getChangedAndExpiredFiles() {
+	/** Get changed or not analysised files but exclude `lib.???.d.ts`. */
+	private getChangedFiles() {
 		// All files exclude typescript lib files.
 		let allFiles = new Set(
 			this.program.getSourceFiles()
-				.filter(file => !/lib\.[^\\\/]+\.d\.ts$/.test(file.fileName))
+				.filter(file => !/lib\.(?:[^\\\/]+\.)?d\.ts$/.test(file.fileName))
 		)
 
 		let changedFiles: Set<ts.SourceFile> = new Set()
@@ -119,38 +119,19 @@ export class FlitAnalyzer {
 		let components = discoverFlitComponents(sourceFile, this.typescript, this.typeChecker)
 		let bindings = discoverFlitBindings(sourceFile, this.typescript, this.typeChecker)
 
+		// `@define ...` results will always cover others. 
 		for (let component of components) {
-			this.analysisDefinedComponent(component.name, component.nameNode, component.declaration, sourceFile)
+			this.analysisComponent(component)
 		}
 	
 		for (let binding of bindings) {
-			this.analysisBinding(binding.name, binding.nameNode, binding.declaration, sourceFile)
+			this.bindings.set(binding.name, binding)
 		}
 	}
 
-	/** Makesure component analysised and returns result. */
-	private getAnalysisedBaseComponent(declaration: ts.ClassLikeDeclaration, sourceFile: ts.SourceFile): FlitComponent {
-		if (!this.components.has(declaration)) {
-			this.analysisBaseComponent(declaration, sourceFile)
-		}
-
-		return this.components.get(declaration)!
-	}
-
-	/** Analysis one component declaration. */
-	private analysisDefinedComponent(name: string, nameNode: ts.Node, declaration: ts.ClassLikeDeclaration, sourceFile: ts.SourceFile) {
-		if (!this.components.has(declaration)) {
-			this.analysisBaseComponent(declaration, sourceFile)
-		}
-
-		// May analysised from heritage, here upgrade it.
-		let component = this.components.get(declaration)!
-		component.name = name
-		component.nameNode = nameNode
-	}
-	
-	/** Analysis one component declaration. */
-	private analysisBaseComponent(declaration: ts.ClassLikeDeclaration, sourceFile: ts.SourceFile) {
+	/** Analysis one base component result. */
+	private analysisComponent(defined: FlitDefined) {
+		let declaration = defined.declaration
 		let properties: Map<string, FlitProperty> = new Map()
 		let events: Map<string, FlitEvent> = new Map()
 
@@ -162,50 +143,48 @@ export class FlitAnalyzer {
 			events.set(event.name, event)
 		}
 		
-		let heritages = this.analysisAndGetHeritages(declaration, sourceFile)
-
-		let component: FlitComponent = {
-			name: null,
-			nameNode: null,
-			declaration,
-			type: this.typeChecker.getTypeAtLocation(declaration),
-			description: getNodeDescription(declaration),
+		// Heriatages to be analysised later, so we will analysis `@define ...`, and then super class.
+		let component = {
+			...defined,
 			properties,
 			events,
-			heritages,
-			sourceFile,
-		}
+			heritages: [],
+		} as FlitComponent
 
+		if (declaration.heritageClauses && declaration.heritageClauses?.length > 0) {
+			this.notResolvedHeritagesComponents.add(component)
+		}
+		
 		this.components.set(declaration, component)
 	}
 
 	/** Analysis heritages and returns result. */
-	private analysisAndGetHeritages(declaration: ts.ClassLikeDeclaration, sourceFile: ts.SourceFile) {
+	private getHeritages(declaration: ts.ClassLikeDeclaration) {
 		let heritages: FlitComponent[] = []
-		let heritageDeclarations = discoverFlitInheritance(declaration, this.typescript, this.typeChecker)
+		let heritageDeclarations = resolveExtendedClasses(declaration, this.typescript, this.typeChecker)
 
 		if (heritageDeclarations) {
 			for (let declaration of heritageDeclarations) {
-				let heritage = this.getAnalysisedBaseComponent(declaration, sourceFile)
-				heritages.push(heritage)
+				let heritage = this.getAnalysisedHeritage(declaration)
+				if (heritage) {
+					heritages.push(heritage)
+				}
 			}
 		}
 
 		return heritages
 	}
-	
-	/** Analysis one binding declaration. */
-	private analysisBinding(name: string, nameNode: ts.Node, declaration: ts.Declaration, sourceFile: ts.SourceFile) {
-		let binding: FlitBinding = {
-			name,
-			nameNode,
-			declaration,
-			type: this.typeChecker.getTypeAtLocation(declaration),
-			description: getNodeDescription(declaration),
-			sourceFile,
+
+	/** Makesure component analysised and returns result. */
+	private getAnalysisedHeritage(declaration: ts.ClassLikeDeclaration): FlitComponent | undefined {
+		if (!this.components.has(declaration)) {
+			let defined = getFlitDefinedFromComponentDeclaration(declaration, this.typeChecker)
+			if (defined) {
+				this.analysisComponent(defined)
+			}
 		}
 
-		this.bindings.set(name, binding)
+		return this.components.get(declaration)
 	}
 
 	/** Get components that name starts with label. */

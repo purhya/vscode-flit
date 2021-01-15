@@ -5,7 +5,7 @@ import * as vscode from 'vscode-languageserver-types'
 import {VSCodeTSTranslater} from '../helpers/vs-ts-translater'
 import {TemplateDocumentProvider} from './template-document-provider'
 import {FlitService} from '../flit-component/flit-service'
-import {debug, quickLog} from '../helpers/logger'
+import {quickLog} from '../helpers/logger'
 import {TextDocument} from 'vscode-languageserver-textdocument'
 import {TemplateContext, TemplateLanguageService} from '../template-decorator'
 
@@ -124,7 +124,6 @@ export class TemplateLanguageServiceRouter implements TemplateLanguageService {
 		if (document.languageId === 'html') {
 			let flitDefinitions = this.flitService.getDefinition(document, position)
 			if (flitDefinitions) {
-				debug(flitDefinitions)
 				return flitDefinitions
 			}
 		}

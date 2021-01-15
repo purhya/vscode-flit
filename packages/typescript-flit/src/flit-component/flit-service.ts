@@ -3,9 +3,11 @@ import {FlitToken, FlitTokenScanner, FlitTokenType} from './flit-toker-scanner'
 import {LanguageService as HTMLLanguageService} from 'vscode-html-languageservice'
 import {FlitAnalyzer} from './flit-analysis/flit-analyzer'
 import {TextDocument} from 'vscode-languageserver-textdocument'
-import {DomElementEvents} from '../helpers/dom-element-events'
+import {DomElementEvents} from '../data/dom-element-events'
 import {getNodeIdentifier, getNodeName} from '../ts-utils/ast-utils'
 import {debug} from '../helpers/logger'
+import {FlitBindingModifiers} from '../data/flit-binding-modifiers'
+import {StyleProperties} from '../data/style-properties'
 
 
 /** Provide flit language service. */
@@ -40,25 +42,39 @@ export class FlitService {
 		// <
 		if (token.type === FlitTokenType.StartTagOpen) {
 			let components = this.analyzer.getComponentsForCompletion('')
-			return this.makeCompletionInfo(components as {name: string, description: string}[], token)
+			let info = this.addSuffixProperty(components, '')
+
+			return this.makeCompletionInfo(info, token)
 		}
 
 		// tag
 		else if (token.type === FlitTokenType.StartTag) {
 			let components = this.analyzer.getComponentsForCompletion(token.value)
-			return this.makeCompletionInfo(components as {name: string, description: string}[], token)
+			let info = this.addSuffixProperty(components, '')
+
+			return this.makeCompletionInfo(info, token)
 		}
 
 		// :xxx
 		else if (token.type === FlitTokenType.Binding) {
 			let bindings = this.analyzer.getBindingsForCompletion(token.value)
-			return this.makeCompletionInfo(bindings, token, '=${}')
+			let info = this.addSuffixProperty(bindings, '=${}')
+			this.fixBindingCompletionInfo(info)
+
+			if (info.length === 0) {
+				info = this.giveMoreBindingCompletionInfo(token)
+				debug(info)
+			}
+
+			return this.makeCompletionInfo(info, token)
 		}
 
 		// .xxx
 		else if (token.type === FlitTokenType.Property) {
 			let properties = this.analyzer.getComponentPropertiesForCompletion(token.value, token.tagName) || []
-			return this.makeCompletionInfo(properties, token, '=${}')
+			let info = this.addSuffixProperty(properties, '=${}')
+
+			return this.makeCompletionInfo(info, token)
 		}
 
 		// @xxx
@@ -67,29 +83,86 @@ export class FlitService {
 
 			if (token.tagName.includes('-')) {
 				let comEvents = this.analyzer.getComponentEventsForCompletion(token.value, token.tagName) || []
-				comEvents.forEach(item => item.name = '@' + item.name)
+				let atComEvents = comEvents.map(item => ({name: '@' + item.name, description: item.description}))
+				let info = this.addSuffixProperty([...atComEvents, ...domEvents], '=${}')
 
-				return this.makeCompletionInfo([...domEvents, ...comEvents, ], token, '=${}')
+				return this.makeCompletionInfo(info, token)
 			}
 			else {
 				let domEvents = this.getDomEventsItems(token.value)
-				return this.makeCompletionInfo(domEvents, token, '=${}')
+				let info = this.addSuffixProperty(domEvents, '=${}')
+
+				return this.makeCompletionInfo(info, token)
 			}
 		}
 
 		// @@xxx
 		else if (token.type === FlitTokenType.ComEvent) {
-			let domEvents = this.getDomEventsItems(token.value)
-			return this.makeCompletionInfo(domEvents, token, '=${}')
+			let comEvents = this.analyzer.getComponentEventsForCompletion(token.value, token.tagName) || []
+			let info = this.addSuffixProperty(comEvents, '=${}')
+
+			return this.makeCompletionInfo(info, token)
 		}
 
 		return null
 	}
 
+	private addSuffixProperty(items: {name: string, description: string | null}[], suffix: string) {
+		return items.map(item => ({
+			name: item.name,
+			description: item.description,
+			suffix,
+		}))
+	}
+
+	private fixBindingCompletionInfo(items: {name: string, description: string | null, suffix: string}[]) {
+		items.forEach(item => {
+			if (item.name === 'class' || FlitBindingModifiers.hasOwnProperty(item.name)) {
+				item.suffix = ''
+			}
+		})
+	}
+
+	private giveMoreBindingCompletionInfo(token: FlitToken) {
+		let bindingName = token.value.replace(/\..*/, '')
+		let modifier = token.value.replace(/^.+?\./, '')
+
+		if (bindingName === 'style') {
+			// Complete modifiers.
+			if (modifier.includes('.')) {
+				let label = modifier.replace(/.+\./, '')
+
+				// Move cursor to `:style.font-size|.`
+				token.start += 1 + bindingName.length + modifier.length
+				token.prefix = '.'
+
+				return this.addSuffixProperty(FlitBindingModifiers.style.filter(item => item.name.startsWith(label)), '=${}')
+			}
+
+			// Complete style property.
+			else {
+				// Move cursor to `:style|.`
+				token.start += 1 + bindingName.length
+				token.prefix = '.'
+
+				return this.addSuffixProperty(StyleProperties.filter(item => item.name.startsWith(modifier)), '')
+			}
+		}
+		else if (bindingName === 'model') {
+
+			// Move cursor to `:model|.`
+			token.start += 1 + bindingName.length
+			token.prefix = '.'
+
+			return this.addSuffixProperty(FlitBindingModifiers.model.filter(item => item.name.startsWith(modifier)), '=${}')
+		}
+
+		return []
+	}
+
 	private makeCompletionInfo(
-		items: {name: string, description: string | null}[],
+		items: {name: string, description: string | null, suffix: string}[],
 		token: FlitToken,
-		suffix: string = ''
 	): ts.CompletionInfo {
 		let entries: ts.CompletionEntry[] = items.map(item => {
 			let name = token.prefix + item.name
@@ -104,7 +177,7 @@ export class FlitService {
 				name,
 				kind,
 				sortText: item.name,
-				insertText: name + suffix,
+				insertText: name + item.suffix,
 				replacementSpan,
 			}
 		})

@@ -6,12 +6,6 @@ import TemplateSettings from './template-settings'
 
 /** If source file not changed, TemplateContext will keep same for same template. */
 export default class TemplateContext {
-	
-	/** Offset of the start template position in original document. */
-	private bodyOffset: number 
-
-	/** Line and character of the start template position in original document. */
-	private bodyPosition: ts.LineAndCharacter
 
 	/** Raw contents of the template string, still has substitutions in place. */
 	rawText: string
@@ -36,35 +30,26 @@ export default class TemplateContext {
 		private readonly helper: ScriptSourceHelper,
 		private readonly typescript: typeof ts
 	) {
-		this.bodyOffset = this.node.pos + 1
-		this.bodyPosition = helper.getPosition(this.fileName, this.bodyOffset)
 		this.rawText = this.node.getFullText().slice(1, -1)
-
-		if (node.kind === typescript.SyntaxKind.NoSubstitutionTemplateLiteral) {
-			this.text = this.rawText
-		}
-		else {
-			this.text = PlaceholderSubstitutionHelper.replacePlaceholders(node, this.rawText, templateSettings)
-		}
-
+		this.text = PlaceholderSubstitutionHelper.replacePlaceholders(node, this.rawText, templateSettings, this.typescript)
 		this.document = TextDocument.create(`untitled://embedded.${this.tagName}`, this.tagName, 1, this.text)
+	}
+	
+	/** Offset of the start template position in original document. */
+	private get bodyOffset(): number {
+		return this.node.pos + 1
+	}
+
+	/** Line and character of the start template position in original document. */
+	private get bodyPosition(): ts.LineAndCharacter {
+		return this.helper.getPosition(this.fileName, this.bodyOffset)
 	}
 
 	update() {
-		this.bodyOffset = this.node.pos + 1
-		this.bodyPosition = this.helper.getPosition(this.fileName, this.bodyOffset)
-
 		let newRawText = this.node.getFullText().slice(1, -1)
 		if (newRawText !== this.rawText) {
 			this.rawText = newRawText
-
-			if (this.node.kind === this.typescript.SyntaxKind.NoSubstitutionTemplateLiteral) {
-				this.text = this.rawText
-			}
-			else {
-				this.text = PlaceholderSubstitutionHelper.replacePlaceholders(this.node, this.rawText, this.templateSettings)
-			}
-
+			this.text = PlaceholderSubstitutionHelper.replacePlaceholders(this.node, this.rawText, this.templateSettings, this.typescript)
 			this.document = TextDocument.create(`untitled://embedded.${this.tagName}`, this.tagName, 1, this.text)
 		}
 	}
@@ -121,7 +106,11 @@ export default class TemplateContext {
 
 namespace PlaceholderSubstitutionHelper {
 
-	export function replacePlaceholders(node: ts.TemplateExpression, templateString: string, settings: TemplateSettings): string {
+	export function replacePlaceholders(node: ts.TemplateLiteral, templateString: string, settings: TemplateSettings, typescript: typeof ts): string {
+		if (node.kind === typescript.SyntaxKind.NoSubstitutionTemplateLiteral) {
+			return templateString
+		}
+
 		return getSubstitutions(
 			node,
 			templateString,

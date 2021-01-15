@@ -1,5 +1,5 @@
 import * as ts from 'typescript/lib/tsserverlibrary'
-import {getNodeDescription, getNodeMemberVisibility} from '../../ts-utils/ast-utils'
+import {getNodeDescription, getNodeMemberVisibility, hasModifierForNode} from '../../ts-utils/ast-utils'
 import {FlitProperty} from './types'
 
 
@@ -20,12 +20,13 @@ export function discoverFlitProperties(declaration: ts.ClassLikeDeclaration, typ
 
 /** Matches class properties from child nodes of a class declaration node. */
 function matchFlitComponentProperty(node: ts.Node, typescript: typeof ts, checker: ts.TypeChecker): FlitProperty | null {
-	// `class {property = value}`
+	// `class {property = value}`, property must be public and not readonly.
 	if (typescript.isPropertyDeclaration(node) || typescript.isPropertySignature(node)) {
 		if (typescript.isIdentifier(node.name) || typescript.isStringLiteralLike(node.name)) {
 			let isPublic = getNodeMemberVisibility(node, typescript) === 'public'
+			let isReadOnly = hasModifierForNode(node, typescript.SyntaxKind.ReadonlyKeyword)
 
-			if (isPublic) {
+			if (isPublic && !isReadOnly) {
 				return {
 					name: node.name.getText(),
 					nameNode: node,
@@ -55,6 +56,8 @@ function matchFlitComponentProperty(node: ts.Node, typescript: typeof ts, checke
 			}
 		}
 	}
+
+	// Flit doesn't like getters, so not check it.
 
 	return null
 }

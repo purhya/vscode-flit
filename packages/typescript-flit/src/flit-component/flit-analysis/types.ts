@@ -1,58 +1,44 @@
-export interface FlitComponent {
-
-	/** Defined tagName in `define(name, ...)`. */
-	name: string | null
-
-	/** Node of it's defined name. */
-	nameNode: ts.Node | null
-
-	/** Defined declaration in `define(..., declaration)`. */
-	declaration: ts.ClassLikeDeclaration
-
-	/** Type of component. */
-	type: ts.Type
-
-	/** Description is just leading comment. */
-	description: string | null
-
-	/** Component public properties, not include properties of super class. */
-	properties: Map<string, FlitProperty>
-
-	/** Component events. */
-	events: Map<string, FlitEvent>
-
-	/** Direct super class, discovered from `... extends SuperClass`, not been resolved with super class chain. */
-	heritages: FlitComponent[]
-
-	/** Source file in. */
-	sourceFile: ts.SourceFile
-}
-
-
 interface FlitBaseItem {
 
-	/** Defined name in `define(name, ...)`. */
-	name: string
+	/** Defined name in `define(name, ...)`, or property name event name. */
+	readonly name: string
 
 	/** Node of it's defined name. */
-	nameNode: ts.Node
+	readonly nameNode: ts.Node
 
 	/** Description is just leading comment. */
-	description: string | null
+	readonly description: string | null
 
 	/** Type of item. */
-	type: ts.Type
+	readonly type: ts.Type
 
 	/** Source file in. */
-	sourceFile: ts.SourceFile
-}
-
-export interface FlitBinding extends FlitBaseItem {
-
-	/** Defined declaration in `defineBinding(..., declaration)`. */
-	declaration: ts.Declaration
+	readonly sourceFile: ts.SourceFile
 }
 
 export interface FlitProperty extends FlitBaseItem {}
 
 export interface FlitEvent extends FlitBaseItem {}
+
+export interface FlitDefined extends Omit<FlitBaseItem, 'nameNode'> {
+
+	/** Node of it's defined name. */
+	readonly nameNode: ts.Node | null
+
+	/** Defined declaration in `defineBinding(..., declaration)`. */
+	readonly declaration: ts.ClassLikeDeclaration
+}
+
+export interface FlitBinding extends FlitDefined {}
+
+export interface FlitComponent extends FlitDefined {
+
+	/** Component public properties, not include properties of super class. */
+	readonly properties: Map<string, FlitProperty>
+
+	/** Component events. */
+	readonly events: Map<string, FlitEvent>
+
+	/** Direct super class, discovered from `... extends SuperClass`, not been resolved with super class chain. */
+	heritages: FlitComponent[]
+}

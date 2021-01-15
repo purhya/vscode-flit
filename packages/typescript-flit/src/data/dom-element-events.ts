@@ -1,4 +1,5 @@
-export const DomElementEvents: {readonly name: string, readonly description: string}[] = [
+
+export const DomElementEvents: DataItem[] = [
 	{
 		name: "abort",
 		description: "The loading of a resource has been aborted.",
