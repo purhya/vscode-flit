@@ -1,14 +1,12 @@
 import {LanguageService as HTMLLanguageService, TokenType} from 'vscode-html-languageservice'
 import {TextDocument} from 'vscode-languageserver-textdocument'
+import {mayDebug, quickDebug} from '../helpers/logger'
 
 
 export interface FlitToken {
 
 	/** Type of token. */
 	type: FlitTokenType
-
-	/** Token text like `.property`. */
-	text: string
 
 	/** Token prefix like `.`, `@`, `:`. */
 	prefix: string
@@ -24,6 +22,9 @@ export interface FlitToken {
 
 	/** End offset of current token. */
 	end: number
+
+	/** Position offset relative to token start. */
+	offset: number
 }
 
 export enum FlitTokenType {
@@ -41,7 +42,7 @@ export class FlitTokenScanner {
 	constructor(
 		private readonly htmlLanguageService: HTMLLanguageService
 	) {}
-
+	
 	scanAt(document: TextDocument, position: ts.LineAndCharacter): FlitToken | null {
 		let offset = document.offsetAt(position)
 		let scanner = this.htmlLanguageService.createScanner(document.getText())
@@ -105,17 +106,38 @@ export class FlitTokenScanner {
 				start = end
 			}
 			
-			return {
+			let result: FlitToken = {
 				type,
-				text,
 				prefix,
 				value,
 				tagName,
 				start,
 				end,
+				offset: offset - start,
 			}
+
+			mayDebug(() => result)
+
+			return result
 		}
 
 		return null
+	}
+
+	/** print tokens for debugging. */
+	printTokens(document: TextDocument) {
+		let scanner = this.htmlLanguageService.createScanner(document.getText())
+		let token = scanner.scan()
+
+		while (token !== TokenType.EOS) {
+			quickDebug({
+				type: TokenType[token],
+				text: scanner.getTokenText(),
+				start: scanner.getTokenOffset(),
+				end: scanner.getTokenEnd(),
+			})
+
+			token = scanner.scan()
+		}
 	}
 }

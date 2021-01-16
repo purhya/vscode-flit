@@ -3,7 +3,7 @@ import ScriptSourceHelper from './helpers/script-source-helper'
 import TemplateContext from './template-context'
 import TemplateSettings from './template-settings'
 import {filterNodeDescent, findNodeAscent} from '../ts-utils/ast-utils'
-import {quickLog} from '../helpers/logger'
+import {quickDebug} from '../helpers/logger'
 
 
 export default class TemplateContextProvider {
@@ -156,7 +156,7 @@ class TemplateContextCache {
 
 	private clearSourceFile(sourceFile: ts.SourceFile) {
 		this.cache.delete(sourceFile)
-		quickLog('source file cleared')
+		quickDebug('source file cleared')
 	}
 
 	add(sourceFile: ts.SourceFile, taggedNode: ts.TaggedTemplateExpression, context: TemplateContext) {

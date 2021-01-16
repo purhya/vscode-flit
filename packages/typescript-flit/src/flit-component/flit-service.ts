@@ -5,9 +5,9 @@ import {FlitAnalyzer} from './flit-analysis/flit-analyzer'
 import {TextDocument} from 'vscode-languageserver-textdocument'
 import {DomElementEvents} from '../data/dom-element-events'
 import {getNodeIdentifier, getNodeName} from '../ts-utils/ast-utils'
-import {debug} from '../helpers/logger'
 import {FlitBindingModifiers} from '../data/flit-binding-modifiers'
 import {StyleProperties} from '../data/style-properties'
+import {quickDebug} from '../helpers/logger'
 
 
 /** Provide flit language service. */
@@ -25,6 +25,10 @@ export class FlitService {
 		this.analyzer = new FlitAnalyzer(typescript, tsLanguageService)
 	}
 
+	printTokens(document: TextDocument) {
+		this.scanner.printTokens(document)
+	}
+
 	/** Makesure to reload changed source files. */
 	private beFresh() {
 		this.analyzer.update()
@@ -36,7 +40,6 @@ export class FlitService {
 			return null
 		}
 
-		debug(token)
 		this.beFresh()
 
 		// <
@@ -57,15 +60,7 @@ export class FlitService {
 
 		// :xxx
 		else if (token.type === FlitTokenType.Binding) {
-			let bindings = this.analyzer.getBindingsForCompletion(token.value)
-			let info = this.addSuffixProperty(bindings, '=')
-			this.fixBindingCompletionInfo(info)
-
-			if (info.length === 0) {
-				info = this.giveMoreBindingCompletionInfo(token)
-				debug(info)
-			}
-
+			let info = this.getBindingCompletionInfo(token)
 			return this.makeCompletionInfo(info, token)
 		}
 
@@ -107,60 +102,77 @@ export class FlitService {
 		return null
 	}
 
+	private getBindingCompletionInfo(token: FlitToken) {
+		if (token.value.includes('.')) {
+			let {bindingName, modifiers} = this.splitBindingProperty(token.value)
+
+			if (bindingName === 'style') {
+				// Complete modifiers.
+				if (modifiers.length === 1) {
+
+					// Move cursor to `:style|.`
+					token.start += 1 + bindingName.length
+					token.prefix = '.'
+
+					let items = StyleProperties.filter(item => item.name.startsWith(modifiers[0]))
+					return this.addSuffixProperty(items, '')
+				}
+
+				// Complete style property.
+				else {
+
+					// Move cursor to `:style.font-size|.`
+					token.start += 1 + bindingName.length + 1 + modifiers[0].length
+					token.prefix = '.'
+
+					let items = FlitBindingModifiers.style.filter(item => item.name.startsWith(modifiers[modifiers.length - 1]))
+					return this.addSuffixProperty(items, '=')
+				}
+			}
+			else if (bindingName === 'model') {
+
+				// Move cursor to `:model???|.`
+				token.start = token.end - (1 + modifiers[modifiers.length - 1].length)
+				token.prefix = '.'
+
+				let items = FlitBindingModifiers.model.filter(item => item.name.startsWith(modifiers[modifiers.length - 1]))
+				return this.addSuffixProperty(items, '')
+			}
+
+			// Completion of `:class` will be handled by `CSS Navigation` plugin.
+		}
+		else {
+			let bindings = this.analyzer.getBindingsForCompletion(token.value)
+			let items = this.addSuffixProperty(bindings, '=')
+
+			// `:class` or `:style`, `:model` may have `.` followed.
+			items.forEach(item => {
+				if (item.name === 'class' || FlitBindingModifiers.hasOwnProperty(item.name)) {
+					item.suffix = ''
+				}
+			})
+
+			return items
+		}
+
+		return []
+	}
+
+	private splitBindingProperty(tokenValue: string) {
+		let [bindingName, ...modifiers] = tokenValue.split('.')
+
+		return {
+			bindingName,
+			modifiers,
+		}
+	}
+
 	private addSuffixProperty(items: {name: string, description: string | null}[], suffix: string) {
 		return items.map(item => ({
 			name: item.name,
 			description: item.description,
 			suffix,
 		}))
-	}
-
-	private fixBindingCompletionInfo(items: {name: string, description: string | null, suffix: string}[]) {
-		items.forEach(item => {
-			if (item.name === 'class' || FlitBindingModifiers.hasOwnProperty(item.name)) {
-				item.suffix = ''
-			}
-			else if (item.name === 'ref') {
-				item.suffix = '=""'
-			}
-		})
-	}
-
-	private giveMoreBindingCompletionInfo(token: FlitToken) {
-		let bindingName = token.value.replace(/\..*/, '')
-		let modifier = token.value.replace(/^.+?\./, '')
-
-		if (bindingName === 'style') {
-			// Complete modifiers.
-			if (modifier.includes('.')) {
-				let label = modifier.replace(/.+\./, '')
-
-				// Move cursor to `:style.font-size|.`
-				token.start += 1 + bindingName.length + modifier.length
-				token.prefix = '.'
-
-				return this.addSuffixProperty(FlitBindingModifiers.style.filter(item => item.name.startsWith(label)), '=')
-			}
-
-			// Complete style property.
-			else {
-				// Move cursor to `:style|.`
-				token.start += 1 + bindingName.length
-				token.prefix = '.'
-
-				return this.addSuffixProperty(StyleProperties.filter(item => item.name.startsWith(modifier)), '')
-			}
-		}
-		else if (bindingName === 'model') {
-
-			// Move cursor to `:model|.`
-			token.start += 1 + bindingName.length
-			token.prefix = '.'
-
-			return this.addSuffixProperty(FlitBindingModifiers.model.filter(item => item.name.startsWith(modifier)), '=')
-		}
-
-		return []
 	}
 
 	private makeCompletionInfo(
@@ -212,7 +224,6 @@ export class FlitService {
 			return null
 		}
 
-		debug(token)
 		this.beFresh()
 		
 		// tag
@@ -223,7 +234,7 @@ export class FlitService {
 
 		// :xxx
 		else if (token.type === FlitTokenType.Binding) {
-			let binding = this.analyzer.getBinding(token.value)
+			let binding = this.getBindingQuickInfo(token)
 			return this.makeQuickInfo(binding, token)
 		}
 
@@ -248,6 +259,77 @@ export class FlitService {
 		return null
 	}
 	
+	private getBindingQuickInfo(token: FlitToken) {
+		if (token.value.includes('.')) {
+			let {bindingName, modifiers} = this.splitBindingProperty(token.value)
+
+			// In `:style` range.
+			if (token.offset < 1 + bindingName.length) {
+				token.end = token.start + 1 + bindingName.length
+				token.value = bindingName
+
+				let binding = this.analyzer.getBinding(token.value)
+				return binding
+			}
+			
+			if (bindingName === 'style') {
+				
+				// in `.style-property` range.
+				if (token.offset < 1 + bindingName.length + 1 + modifiers[0].length) {
+
+					// Move start and end to `:style|.style-property|.`
+					token.start += 1 + bindingName.length
+					token.end = token.start + 1 + modifiers[0].length
+					token.prefix = '.'
+					token.value = modifiers[0]
+
+					return StyleProperties.find(item => item.name.startsWith(modifiers[0])) || null
+				}
+
+				// in `.px` range.
+				else {
+
+					// Move start to `:style.style-property|.`
+					token.start += 1 + bindingName.length + 1 + modifiers[0].length
+					token.prefix = '.'
+					token.value = modifiers[1]
+
+					return FlitBindingModifiers.style.find(item => item.name.startsWith(modifiers[1])) || null
+				}
+			}
+
+			else if (bindingName === 'model') {
+				let modifierStart = 1 + bindingName.length
+				let matchModifier = ''
+
+				for (let modifier of modifiers) {
+					let modifierEnd = modifierStart + 1 + modifier.length
+					if (modifierEnd > token.offset) {
+						matchModifier = modifier
+						break
+					}
+
+					modifierStart = modifierEnd
+				}
+
+				// Move start to `:model???|.`
+				quickDebug([token.start, token.end])
+				token.start += modifierStart
+				token.end = token.start + 1 + matchModifier.length
+				token.prefix = '.'
+				token.value = matchModifier
+
+				return FlitBindingModifiers.model.find(item => item.name.startsWith(matchModifier)) || null
+			}
+		}
+		else {
+			let binding = this.analyzer.getBinding(token.value)
+			return binding
+		}
+
+		return null
+	}
+
 	private makeQuickInfo(
 		item: {name: string, type?: ts.Type, description: string | null} | null,
 		token: FlitToken
@@ -266,9 +348,9 @@ export class FlitService {
 		let headers: ts.SymbolDisplayPart[] = []
 		let documentation: ts.SymbolDisplayPart[] = []
 
-		let headerText = token.text
+		let headerText = token.prefix + token.value
 		if (token.type === FlitTokenType.StartTag) {
-			headerText = '<' + token.text + '>'
+			headerText = '<' + headerText + '>'
 		}
 		if (item.type) {
 			headerText += ': ' + this.analyzer.getTypeDescription(item.type)
@@ -343,7 +425,6 @@ export class FlitService {
 			return null
 		}
 
-		debug(token)
 		this.beFresh()
 		
 		// tag
@@ -354,7 +435,7 @@ export class FlitService {
 
 		// :xxx
 		else if (token.type === FlitTokenType.Binding) {
-			let binding = this.analyzer.getBinding(token.value)
+			let binding = this.analyzer.getBinding(this.splitBindingProperty(token.value).bindingName)
 			return this.makeDefinitionInfo(binding, token)
 		}
 

@@ -155,14 +155,15 @@ function guessFlitBinding(node: ts.Node, typescript: typeof ts, checker: ts.Type
 		return null
 	}
 	
-	let beABinding = false
-	for (let superClass of iterateExtendedOrImplementedInterfaces(node, typescript, checker)) {
-		if (superClass.name?.getText() === 'Binding') {
-			beABinding = true
+	let bindingInterface: ts.InterfaceDeclaration | undefined
+	
+	for (let superInterface of iterateExtendedOrImplementedInterfaces(node, typescript, checker)) {
+		if (superInterface.name?.getText() === 'Binding') {
+			bindingInterface = superInterface
 		}
 	}
 
-	if (!beABinding) {
+	if (!bindingInterface) {
 		return null
 	}
 

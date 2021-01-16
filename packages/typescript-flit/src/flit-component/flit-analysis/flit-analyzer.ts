@@ -3,7 +3,8 @@ import {discoverFlitBindings, discoverFlitComponents, getFlitDefinedFromComponen
 import {discoverFlitEvents} from './discover-flit-events'
 import {discoverFlitProperties} from './discover-flit-properties'
 import {FlitBinding, FlitComponent, FlitDefined, FlitEvent, FlitProperty} from './types'
-import {resolveExtendedClasses} from '../../ts-utils/ast-utils'
+import {iterateExtendedClasses, resolveExtendedClasses} from '../../ts-utils/ast-utils'
+import {mayDebug} from '../../helpers/logger'
 
 
 export class FlitAnalyzer {
@@ -154,6 +155,13 @@ export class FlitAnalyzer {
 		if (declaration.heritageClauses && declaration.heritageClauses?.length > 0) {
 			this.notResolvedHeritagesComponents.add(component)
 		}
+
+		mayDebug(() => ({
+			name: component.name,
+			heritages: [...iterateExtendedClasses(component.declaration, this.typescript, this.typeChecker)].map(n => n.name?.getText()),
+			properties: [...component.properties.values()].map(p => p.name),
+			events: [...component.events.values()].map(e => e.name),
+		}))
 		
 		this.components.set(declaration, component)
 	}

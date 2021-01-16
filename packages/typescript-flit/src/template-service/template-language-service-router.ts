@@ -217,7 +217,7 @@ export class TemplateLanguageServiceRouter implements TemplateLanguageService {
 				return undefined
 			}
 
-			// HTML returns completions with snippet placeholders. Strip these out.
+			// HTML returned completions having `$0` like snippet placeholders.
 			return {
 				newText: tagComplete.replace(/\$\d/g, ''),
 			}

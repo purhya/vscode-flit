@@ -1,4 +1,5 @@
 import * as ts from 'typescript/lib/tsserverlibrary'
+import {quickDebug} from '../helpers/logger'
 
 
 // Reference to https://github.com/runem/web-component-analyzer/blob/master/src/analyze/util/ast-util.ts
@@ -330,8 +331,8 @@ export function getNodeName(node: ts.Node, typescript: typeof ts): string | null
 }
 
 
-/** Get node tree text for debugging. */
-export function getNodeTreeText(node: ts.Node, typescript: typeof ts) {
+/** print node tree text for debugging. */
+export function printNodeTreeText(node: ts.Node, typescript: typeof ts) {
 	let text = ''
 
 	let walk = (node: ts.Node, tabCount: number) => {
@@ -353,7 +354,7 @@ export function getNodeTreeText(node: ts.Node, typescript: typeof ts) {
 
 	walk(node, 0)
 
-	return text
+	quickDebug(text)
 }
 
 

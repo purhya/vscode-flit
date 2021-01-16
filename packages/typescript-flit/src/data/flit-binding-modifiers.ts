@@ -5,6 +5,7 @@ export const FlitBindingModifiers: Record<'style' | 'model', DataItem[]> = {
 		{name: 'url', description: 'Wrap computed value with `url()`.'},
 	],
 	model: [
-		{name: 'lazy', description: 'Modify value after `change` event if specified, otherwise after `input` event.'},
+		{name: 'lazy', description: 'Modify value after `change` event if specified, otherwise modify after `input` event.'},
+		{name: 'number', description: 'Converte string as number.'},
 	]
 }
