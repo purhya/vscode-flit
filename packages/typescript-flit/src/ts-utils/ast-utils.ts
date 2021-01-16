@@ -5,6 +5,12 @@ import {quickDebug} from '../helpers/logger'
 // Reference to https://github.com/runem/web-component-analyzer/blob/master/src/analyze/util/ast-util.ts
 
 
+export interface ClassOrInterfaceUsage<T extends ts.ClassLikeDeclaration | ts.InterfaceDeclaration> {
+	declaration: T
+	typeArguments: ts.NodeArray<ts.TypeNode> | null
+}
+
+
 /** Get declaration, means find the node where it defined from giver node. */
 export function resolveNodeDeclarations(node: ts.Node, typescript: typeof ts, checker: ts.TypeChecker): ts.Declaration[] {
 	let symbol = getNodeSymbol(node, typescript, checker)
@@ -376,7 +382,7 @@ export function splitIntersectionTypes(type: ts.TypeNode, typescript: typeof ts)
 
 
 /** Discovers class inheritance from given node by looking at `extends`. */
-export function resolveExtendedClasses(node: ts.ClassLikeDeclaration, typescript: typeof ts, checker: ts.TypeChecker): ts.ClassLikeDeclaration[] | null {
+export function resolveExtendedClasses(node: ts.ClassLikeDeclaration, typescript: typeof ts, checker: ts.TypeChecker): ClassOrInterfaceUsage<ts.ClassLikeDeclaration>[] | null {
 	return resolveExtendsOrImplements(node, (node: ts.Node): node is ts.ClassLikeDeclaration => {
 		return typescript.isClassLike(node)
 	}, typescript, checker)
@@ -384,31 +390,36 @@ export function resolveExtendedClasses(node: ts.ClassLikeDeclaration, typescript
 
 
 /** Discovers class inheritance from given node by looking at `extends`. */
-function resolveExtendsOrImplements<T extends ts.Node>(
+function resolveExtendsOrImplements<T extends ts.ClassLikeDeclaration | ts.InterfaceDeclaration>(
 	node: ts.ClassLikeDeclaration | ts.InterfaceDeclaration,
 	condition: (node: ts.Node) => node is T,
 	typescript: typeof ts,
 	checker: ts.TypeChecker
-): T[] | null {
+) {
 	if (!node.heritageClauses) {
 		return null
 	}
 
-	let heritages: T[] = []
+	let heritages: ClassOrInterfaceUsage<T>[] = []
 
 	// Resolve inheritance.
 	for (let heritage of node.heritageClauses) {
 		for (let type of heritage.types) {
 			let extendsIdentifier = type.getChildAt(0)
+			let typeArguments = type.typeArguments || null
+
 			if (!extendsIdentifier) {
 				continue
 			}
 
 			let declrations = resolveNodeDeclarations(extendsIdentifier, typescript, checker)
-			let extendsDeclaration = declrations.find(declaration => condition(declaration)) as T | undefined
+			let declaration = declrations.find(declaration => condition(declaration)) as T | undefined
 
-			if (extendsDeclaration) {
-				heritages.push(extendsDeclaration)
+			if (declaration) {
+				heritages.push({
+					declaration,
+					typeArguments,
+				})
 			}
 		}
 	}
@@ -418,12 +429,16 @@ function resolveExtendsOrImplements<T extends ts.Node>(
 
 
 /** Discovers chained class inheritance chains from given node by looking at `extends` one by one. */
-export function *iterateExtendedClasses(node: ts.ClassLikeDeclaration, typescript: typeof ts, checker: ts.TypeChecker): Generator<ts.ClassLikeDeclaration> {
+export function *iterateExtendedClasses(
+	node: ts.ClassLikeDeclaration,
+	typescript: typeof ts,
+	checker: ts.TypeChecker
+) :Generator<ClassOrInterfaceUsage<ts.ClassLikeDeclaration>> {
 	let heritages = resolveExtendedClasses(node, typescript, checker)
 	if (heritages) {
 		for (let heritage of heritages) {
 			yield heritage
-			yield *iterateExtendedClasses(heritage, typescript, checker)
+			yield *iterateExtendedClasses(heritage.declaration, typescript, checker)
 		}
 	}
 }
@@ -434,7 +449,7 @@ export function resolveImplementedOrExtendedInterfaces(
 	node: ts.ClassLikeDeclaration | ts.InterfaceDeclaration,
 	typescript: typeof ts,
 	checker: ts.TypeChecker
-): ts.InterfaceDeclaration[] | null {
+): ClassOrInterfaceUsage<ts.InterfaceDeclaration>[] | null {
 	return resolveExtendsOrImplements(node, (node: ts.Node): node is ts.InterfaceDeclaration => {
 		return typescript.isInterfaceDeclaration(node)
 	}, typescript, checker)
@@ -442,12 +457,16 @@ export function resolveImplementedOrExtendedInterfaces(
 
 
 /** Discovers chained interface inheritance from given node by looking at `extends` and `implement` one by one. */
-export function *iterateExtendedOrImplementedInterfaces(node: ts.ClassLikeDeclaration | ts.InterfaceDeclaration, typescript: typeof ts, checker: ts.TypeChecker): Generator<ts.InterfaceDeclaration> {
+export function *iterateExtendedOrImplementedInterfaces(
+	node: ts.ClassLikeDeclaration | ts.InterfaceDeclaration,
+	typescript: typeof ts,
+	checker: ts.TypeChecker
+):	Generator<ClassOrInterfaceUsage<ts.InterfaceDeclaration>> {
 	if (typescript.isClassLike(node)) {
 		let superClasses = resolveExtendedClasses(node, typescript, checker)
 		if (superClasses) {
 			for (let superClass of superClasses) {
-				yield *iterateExtendedOrImplementedInterfaces(superClass, typescript, checker)
+				yield *iterateExtendedOrImplementedInterfaces(superClass.declaration, typescript, checker)
 			}
 		}
 	}
@@ -456,7 +475,7 @@ export function *iterateExtendedOrImplementedInterfaces(node: ts.ClassLikeDeclar
 	if (heritages) {
 		for (let heritage of heritages) {
 			yield heritage
-			yield *iterateExtendedOrImplementedInterfaces(heritage, typescript, checker)
+			yield *iterateExtendedOrImplementedInterfaces(heritage.declaration, typescript, checker)
 		}
 	}
 }

@@ -1,6 +1,6 @@
 import * as ts from 'typescript/lib/tsserverlibrary'
 import {resolveNodeValue} from '../../ts-utils/resolve-node-value'
-import {getNodeDescription, iterateExtendedClasses, iterateExtendedOrImplementedInterfaces, matchNodeDescentUnNesting, resolveNodeDeclarations} from '../../ts-utils/ast-utils'
+import {ClassOrInterfaceUsage, getNodeDescription, iterateExtendedClasses, iterateExtendedOrImplementedInterfaces, matchNodeDescentUnNesting, resolveNodeDeclarations} from '../../ts-utils/ast-utils'
 import {FlitDefined} from './types'
 
 
@@ -110,7 +110,7 @@ function guessFlitComponent(node: ts.Node, typescript: typeof ts, checker: ts.Ty
 	
 	let beAComponent = false
 	for (let superClass of iterateExtendedClasses(node, typescript, checker)) {
-		if (superClass.name?.getText() === 'Component') {
+		if (superClass.declaration.name?.getText() === 'Component') {
 			beAComponent = true
 		}
 	}
@@ -155,10 +155,10 @@ function guessFlitBinding(node: ts.Node, typescript: typeof ts, checker: ts.Type
 		return null
 	}
 	
-	let bindingInterface: ts.InterfaceDeclaration | undefined
+	let bindingInterface: ClassOrInterfaceUsage<ts.InterfaceDeclaration> | undefined
 	
 	for (let superInterface of iterateExtendedOrImplementedInterfaces(node, typescript, checker)) {
-		if (superInterface.name?.getText() === 'Binding') {
+		if (superInterface.declaration.name?.getText() === 'Binding') {
 			bindingInterface = superInterface
 		}
 	}
@@ -180,12 +180,16 @@ function guessFlitBinding(node: ts.Node, typescript: typeof ts, checker: ts.Type
 	if (!name) {
 		return null
 	}
+
+	let type = bindingInterface.typeArguments && bindingInterface.typeArguments.length > 0
+		? checker.getTypeAtLocation(bindingInterface.typeArguments[0])
+		: (checker as any).getAnyType()	// Private checker API.
 	
 	return {
 		name,
 		nameNode: null,
 		declaration: node,
-		type: checker.getTypeAtLocation(node),
+		type: type!,
 		description,
 		sourceFile: node.getSourceFile(),
 	}

@@ -7,7 +7,6 @@ import {DomElementEvents} from '../data/dom-element-events'
 import {getNodeIdentifier, getNodeName} from '../ts-utils/ast-utils'
 import {FlitBindingModifiers} from '../data/flit-binding-modifiers'
 import {StyleProperties} from '../data/style-properties'
-import {quickDebug} from '../helpers/logger'
 
 
 /** Provide flit language service. */
@@ -264,7 +263,7 @@ export class FlitService {
 			let {bindingName, modifiers} = this.splitBindingProperty(token.value)
 
 			// In `:style` range.
-			if (token.offset < 1 + bindingName.length) {
+			if (token.cursorOffset < 1 + bindingName.length) {
 				token.end = token.start + 1 + bindingName.length
 				token.value = bindingName
 
@@ -275,7 +274,7 @@ export class FlitService {
 			if (bindingName === 'style') {
 				
 				// in `.style-property` range.
-				if (token.offset < 1 + bindingName.length + 1 + modifiers[0].length) {
+				if (token.cursorOffset < 1 + bindingName.length + 1 + modifiers[0].length) {
 
 					// Move start and end to `:style|.style-property|.`
 					token.start += 1 + bindingName.length
@@ -304,7 +303,7 @@ export class FlitService {
 
 				for (let modifier of modifiers) {
 					let modifierEnd = modifierStart + 1 + modifier.length
-					if (modifierEnd > token.offset) {
+					if (modifierEnd > token.cursorOffset) {
 						matchModifier = modifier
 						break
 					}
@@ -312,8 +311,7 @@ export class FlitService {
 					modifierStart = modifierEnd
 				}
 
-				// Move start to `:model???|.`
-				quickDebug([token.start, token.end])
+				// Move start and end to `:model???|.number|...`
 				token.start += modifierStart
 				token.end = token.start + 1 + matchModifier.length
 				token.prefix = '.'

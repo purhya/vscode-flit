@@ -23,8 +23,8 @@ export interface FlitToken {
 	/** End offset of current token. */
 	end: number
 
-	/** Position offset relative to token start. */
-	offset: number
+	/** Cursor offset relative to token start. */
+	cursorOffset: number
 }
 
 export enum FlitTokenType {
@@ -113,7 +113,7 @@ export class FlitTokenScanner {
 				tagName,
 				start,
 				end,
-				offset: offset - start,
+				cursorOffset: offset - start,
 			}
 
 			mayDebug(() => result)

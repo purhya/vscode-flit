@@ -18,8 +18,8 @@ export class FlitAnalyzer {
 	/** Analysised bindings. */
 	private bindings: Map<string, FlitBinding> = new Map()
 
-	/** Analysised components, but heritages not been analysised because expired or can't been resolved. */
-	private notResolvedHeritagesComponents: Set<FlitComponent> = new Set()
+	/** Analysised components, but extended class not been analysised because expired or can't been resolved. */
+	private extendedClassNotResolvedComponents: Set<FlitComponent> = new Set()
 
 	constructor(
 		private readonly typescript: typeof ts,
@@ -47,14 +47,14 @@ export class FlitAnalyzer {
 			this.analysisTSFile(file)
 		}
 
-		// If `extends XXX` can't been resolved, keep it in `notResolvedHeritagesComponents` and check it every time.
-		// Otherwise we analysis all components, and then their heritages.
+		// If `extends XXX` can't been resolved, keep it in `extendedClassNotResolvedComponents` and check it every time.
+		// Otherwise we analysis all components, and then their extended classes.
 		if (changedFiles.size > 0) {
-			for (let component of [...this.notResolvedHeritagesComponents]) {
-				let heritages = this.getHeritages(component.declaration)
-				if (heritages.length > 0) {
-					component.heritages = heritages
-					this.notResolvedHeritagesComponents.delete(component)
+			for (let component of [...this.extendedClassNotResolvedComponents]) {
+				let superClasses = this.getExtendedClasses(component.declaration)
+				if (superClasses.length > 0) {
+					component.extendedClasses = superClasses
+					this.extendedClassNotResolvedComponents.delete(component)
 				}
 			}
 		}
@@ -95,15 +95,15 @@ export class FlitAnalyzer {
 		for (let [declaration, component] of [...this.components.entries()]) {
 			if (files.has(component.sourceFile)) {
 				this.components.delete(declaration)
-				this.notResolvedHeritagesComponents.delete(component)
+				this.extendedClassNotResolvedComponents.delete(component)
 			}
 		}
 
-		// Heritages expired.
+		// Extended Classes expired.
 		for (let component of this.components.values()) {
-			if (component.heritages && component.heritages.some(heritage => files.has(heritage.sourceFile))) {
-				component.heritages = []
-				this.notResolvedHeritagesComponents.add(component)
+			if (component.extendedClasses && component.extendedClasses.some(superClass => files.has(superClass.sourceFile))) {
+				component.extendedClasses = []
+				this.extendedClassNotResolvedComponents.add(component)
 			}
 		}
 
@@ -149,16 +149,16 @@ export class FlitAnalyzer {
 			...defined,
 			properties,
 			events,
-			heritages: [],
+			extendedClasses: [],
 		} as FlitComponent
 
 		if (declaration.heritageClauses && declaration.heritageClauses?.length > 0) {
-			this.notResolvedHeritagesComponents.add(component)
+			this.extendedClassNotResolvedComponents.add(component)
 		}
 
 		mayDebug(() => ({
 			name: component.name,
-			heritages: [...iterateExtendedClasses(component.declaration, this.typescript, this.typeChecker)].map(n => n.name?.getText()),
+			superClasses: [...iterateExtendedClasses(component.declaration, this.typescript, this.typeChecker)].map(n => n.declaration.name?.getText()),
 			properties: [...component.properties.values()].map(p => p.name),
 			events: [...component.events.values()].map(e => e.name),
 		}))
@@ -166,25 +166,25 @@ export class FlitAnalyzer {
 		this.components.set(declaration, component)
 	}
 
-	/** Analysis heritages and returns result. */
-	private getHeritages(declaration: ts.ClassLikeDeclaration) {
-		let heritages: FlitComponent[] = []
-		let heritageDeclarations = resolveExtendedClasses(declaration, this.typescript, this.typeChecker)
+	/** Analysis extended classes and returns result. */
+	private getExtendedClasses(declaration: ts.ClassLikeDeclaration) {
+		let extendedClasses: FlitComponent[] = []
+		let classesWithType = resolveExtendedClasses(declaration, this.typescript, this.typeChecker)
 
-		if (heritageDeclarations) {
-			for (let declaration of heritageDeclarations) {
-				let heritage = this.getAnalysisedHeritage(declaration)
-				if (heritage) {
-					heritages.push(heritage)
+		if (classesWithType) {
+			for (let declaration of classesWithType.map(v => v.declaration)) {
+				let superClass = this.getAnalysisedSuperClass(declaration)
+				if (superClass) {
+					extendedClasses.push(superClass)
 				}
 			}
 		}
 
-		return heritages
+		return extendedClasses
 	}
 
 	/** Makesure component analysised and returns result. */
-	private getAnalysisedHeritage(declaration: ts.ClassLikeDeclaration): FlitComponent | undefined {
+	private getAnalysisedSuperClass(declaration: ts.ClassLikeDeclaration): FlitComponent | undefined {
 		if (!this.components.has(declaration)) {
 			let defined = getFlitDefinedFromComponentDeclaration(declaration, this.typeChecker)
 			if (defined) {
@@ -241,12 +241,12 @@ export class FlitAnalyzer {
 		return [...properties.values()]
 	}
 
-	/** Walk component and it's heritages. */
+	/** Walk component and it's super classes. */
 	private *walkComponents(component: FlitComponent, deep = 0): Generator<FlitComponent> {
 		yield component
 
-		for (let heritage of component.heritages) {
-			yield *this.walkComponents(heritage, deep + 1)
+		for (let superClass of component.extendedClasses) {
+			yield *this.walkComponents(superClass, deep + 1)
 		}
 	}
 
