@@ -15,10 +15,28 @@ export function autoCompletion(event: vscode.TextDocumentChangeEvent): void {
 	}
 }
 
-
 function isTypeScriptLanguage(languageId: string) {
 	return languageId === 'typescript' || languageId === 'typescriptreact'
 }
+
+
+interface AutoInsertingItem {
+
+	/** From string `=$`. */
+	from: string
+
+	/** Insert string `{}` */
+	insert: string
+
+	/** Cursor offset after inserting. */
+	cursorOffset: number
+}
+
+const AutoInsertingItems: AutoInsertingItem[] = [{
+	from: '=$',
+	insert: '{}',
+	cursorOffset: 1,
+}]
 
 
 async function autoInserting() {
@@ -31,19 +49,21 @@ async function autoInserting() {
 	let document = editor.document
 	let selection = editor.selection
 	let currentLine = document.lineAt(selection.active).text
-	let currentTwoChars = currentLine.slice(selection.active.character - 1, selection.active.character + 1)
 
-	if (currentTwoChars === '=$') {
-		let insertPosition = selection.active.translate(0, 1)
+	for (let {from, insert, cursorOffset} of AutoInsertingItems) {
+		let leftChars = currentLine.slice(selection.active.character - from.length + 1, selection.active.character + 1)
+		if (leftChars === from) {
+			let insertPosition = selection.active.translate(0, 1)
 
-		// Insert `{}` after `=$`.
-		await editor.edit(editBuilder => {
-			editBuilder.insert(insertPosition, '{}')
-		})
+			// Insert `{}` after `=$`.
+			await editor.edit(editBuilder => {
+				editBuilder.insert(insertPosition, insert)
+			})
 
-		// Moves cursor to `{|}`
-		let cursorPosition = insertPosition.translate(0, 1)
-		editor.selection = new vscode.Selection(cursorPosition, cursorPosition)
+			// Moves cursor to `{|}`
+			let cursorPosition = insertPosition.translate(0, cursorOffset)
+			editor.selection = new vscode.Selection(cursorPosition, cursorPosition)
+		}
 	}
 }
 

@@ -1,9 +1,9 @@
 import * as ts from 'typescript/lib/tsserverlibrary'
 import {discoverFlitBindings, discoverFlitComponents, getFlitDefinedFromComponentDeclaration} from './discover-flit-components-bindings'
 import {discoverFlitEvents} from './discover-flit-events'
-import {discoverFlitProperties} from './discover-flit-properties'
+import {discoverFlitProperties, discoverFlitSubProperties} from './discover-flit-properties'
 import {FlitBinding, FlitComponent, FlitDefined, FlitEvent, FlitProperty} from './types'
-import {iterateExtendedClasses, resolveExtendedClasses} from '../../ts-utils/ast-utils'
+import {findNodeAscent, iterateExtendedClasses, resolveExtendedClasses} from '../../ts-utils/ast-utils'
 import {mayDebug} from '../../helpers/logger'
 
 
@@ -135,6 +135,8 @@ export class FlitAnalyzer {
 		let declaration = defined.declaration
 		let properties: Map<string, FlitProperty> = new Map()
 		let events: Map<string, FlitEvent> = new Map()
+		let refs: Map<string, FlitProperty> = new Map()
+		let slots: Map<string, FlitProperty> = new Map()
 
 		for (let property of discoverFlitProperties(declaration, this.typescript, this.typeChecker)) {
 			properties.set(property.name, property)
@@ -143,12 +145,22 @@ export class FlitAnalyzer {
 		for (let event of discoverFlitEvents(declaration, this.typescript, this.typeChecker)) {
 			events.set(event.name, event)
 		}
+
+		for (let ref of discoverFlitSubProperties(declaration, 'refs', this.typescript, this.typeChecker) || []) {
+			refs.set(ref.name, ref)
+		}
+
+		for (let slot of discoverFlitSubProperties(declaration, 'slots', this.typescript, this.typeChecker) || []) {
+			slots.set(slot.name, slot)
+		}
 		
 		// Heriatages to be analysised later, so we will analysis `@define ...`, and then super class.
 		let component = {
 			...defined,
 			properties,
 			events,
+			refs,
+			slots,
 			extendedClasses: [],
 		} as FlitComponent
 
@@ -161,6 +173,8 @@ export class FlitAnalyzer {
 			superClasses: [...iterateExtendedClasses(component.declaration, this.typescript, this.typeChecker)].map(n => n.declaration.name?.getText()),
 			properties: [...component.properties.values()].map(p => p.name),
 			events: [...component.events.values()].map(e => e.name),
+			refs: [...component.refs.values()].map(e => e.name),
+			slots: [...component.slots.values()].map(e => e.name),
 		}))
 		
 		this.components.set(declaration, component)
@@ -221,7 +235,7 @@ export class FlitAnalyzer {
 		return bindings
 	}
 
-	/** Get properties for component defined with `tagName`, and property starts with label. */
+	/** Get properties for component defined with `tagName`, and name starts with label. */
 	getComponentPropertiesForCompletion(label: string, tagName: string): FlitProperty[] | null {
 		let component = [...this.components.values()].find(component => component.name === tagName)
 		if (!component) {
@@ -250,7 +264,7 @@ export class FlitAnalyzer {
 		}
 	}
 
-	/** Get properties for component defined with `tagName`, and property starts with label. */
+	/** Get events for component defined with `tagName`, and name starts with label. */
 	getComponentEventsForCompletion(label: string, tagName: string): FlitEvent[] | null {
 		let component = [...this.components.values()].find(component => component.name === tagName)
 		if (!component) {
@@ -270,7 +284,32 @@ export class FlitAnalyzer {
 		return [...events.values()]
 	}
 
-	/** Get components that name starts with label. */
+	/** Get all refs or slots properties outer class declaration contains given node. */
+	getSubPropertiesForCompletion(node: ts.Node, propertyName: 'refs' | 'slots', label: string): FlitProperty[] | null {
+		let declaration = findNodeAscent(node, child => this.typescript.isClassLike(child)) as ts.ClassLikeDeclaration
+		if (!declaration) {
+			return null
+		}
+
+		let component = this.components.get(declaration)
+		if (!component) {
+			return null
+		}
+
+		let properties: Map<string, FlitProperty> = new Map()
+
+		for (let com of this.walkComponents(component)) {
+			for (let property of com[propertyName].values()) {
+				if (property.name.startsWith(label) && !properties.has(property.name)) {
+					properties.set(property.name, property)
+				}
+			}
+		}
+
+		return [...properties.values()]
+	}
+
+	/** Get components that name matches label. */
 	getComponent(label: string): FlitComponent | null {
 		for (let component of this.components.values()) {
 			if (component.name === label) {
@@ -281,7 +320,7 @@ export class FlitAnalyzer {
 		return null
 	}
 
-	/** Get bindings that name starts with label. */
+	/** Get bindings that name matches label. */
 	getBinding(label: string): FlitBinding | null {
 		for (let binding of this.bindings.values()) {
 			if (binding.name === label) {
@@ -292,7 +331,7 @@ export class FlitAnalyzer {
 		return null
 	}
 
-	/** Get properties for component defined with `tagName`, and property starts with label. */
+	/** Get properties for component defined with `tagName`, and name matches label. */
 	getComponentProperty(label: string, tagName: string): FlitProperty | null {
 		let component = [...this.components.values()].find(component => component.name === tagName)
 		if (!component) {
@@ -310,7 +349,7 @@ export class FlitAnalyzer {
 		return null
 	}
 
-	/** Get properties for component defined with `tagName`, and property starts with label. */
+	/** Get events for component defined with `tagName`, and name matches label. */
 	getComponentEvent(label: string, tagName: string): FlitEvent | null {
 		let component = [...this.components.values()].find(component => component.name === tagName)
 		if (!component) {
@@ -321,6 +360,29 @@ export class FlitAnalyzer {
 			for (let event of com.events.values()) {
 				if (event.name === label) {
 					return event
+				}
+			}
+		}
+
+		return null
+	}
+
+	/** Get all refs or slots properties outer class declaration contains given node. */
+	getSubProperties(node: ts.Node, propertyName: 'refs' | 'slots', label: string): FlitProperty | null {
+		let declaration = findNodeAscent(node, child => this.typescript.isClassLike(child)) as ts.ClassLikeDeclaration
+		if (!declaration) {
+			return null
+		}
+
+		let component = this.components.get(declaration)
+		if (!component) {
+			return null
+		}
+
+		for (let com of this.walkComponents(component)) {
+			for (let property of com[propertyName].values()) {
+				if (property.name === label) {
+					return property
 				}
 			}
 		}

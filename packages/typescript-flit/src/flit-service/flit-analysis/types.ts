@@ -39,6 +39,12 @@ export interface FlitComponent extends FlitDefined {
 	/** Component events. */
 	readonly events: Map<string, FlitEvent>
 
+	/** Component refs. */
+	readonly refs: Map<string, FlitEvent>
+
+	/** Component slots. */
+	readonly slots: Map<string, FlitEvent>
+
 	/** Direct super class, discovered from `... extends SuperClass`, not been resolved with super class chain. */
 	extendedClasses: FlitComponent[]
 }

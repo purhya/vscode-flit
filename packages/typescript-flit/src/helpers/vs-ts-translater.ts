@@ -159,16 +159,16 @@ export class VSCodeTSTranslater {
 
 	private translateCompetionEntry(vsItem: vscode.CompletionItem, context: TemplateContext): ts.CompletionEntry {
 		let kind = vsItem.kind ? this.translateionCompletionItemKind(vsItem.kind) : this.typescript.ScriptElementKind.unknown
-		let name = this.removeSnippet(vsItem.label)
+		let name = this.removeSnippetPlaceholders(vsItem.label)
 
 		let entry: ts.CompletionEntry = {
-			name: this.removeSnippet(vsItem.label),
+			name: this.removeSnippetPlaceholders(vsItem.label),
 			kind,
 			sortText: name,
 		}
 
 		if (vsItem.textEdit) {
-			entry.insertText = this.removeSnippet(vsItem.textEdit.newText)
+			entry.insertText = this.removeSnippetPlaceholders(vsItem.textEdit.newText)
 
 			if (vsItem.textEdit.hasOwnProperty('range')) {
 				entry.replacementSpan = this.toTsSpan((vsItem.textEdit as vscode.TextEdit).range, context)
@@ -182,8 +182,8 @@ export class VSCodeTSTranslater {
 	}
 
 	/** vscode snippet syntax `$1` not been supported in typescript. */
-	private removeSnippet(label: string) {
-		return label.replace(/\$\d/, '')
+	removeSnippetPlaceholders(label: string) {
+		return label.replace(/\$\d/g, '')
 	}
 
 	translateCompletionToEntryDetails(item: vscode.CompletionItem): ts.CompletionEntryDetails {

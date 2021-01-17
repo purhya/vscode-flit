@@ -3,19 +3,23 @@ import {TextDocument} from 'vscode-languageserver-textdocument'
 import {mayDebug, quickDebug} from '../helpers/logger'
 
 
+/** Flit token is modifiable. */
 export interface FlitToken {
 
 	/** Type of token. */
 	type: FlitTokenType
 
-	/** Token prefix like `.`, `@`, `:`. */
-	prefix: string
-
-	/** Token value with token prefix. */
-	value: string
-
 	/** Tag name current token inside of. */
 	tagName: string
+
+	/** Token prefix like `.`, `@`, `:`. */
+	attrPrefix: string
+
+	/** Token value without token prefix. */
+	attrName: string
+
+	/** Current attribute value like `"v"` inside `:ref="v"`, wrapped in quotes, be `null` cursor if not in an attribute value. */
+	attrValue: string | null
 
 	/** Start offset of current token. */
 	start: number
@@ -48,10 +52,14 @@ export class FlitTokenScanner {
 		let scanner = this.htmlLanguageService.createScanner(document.getText())
 		let token = scanner.scan()
 		let tagName: string | null = null
+		let attrName: string | null = null
 
 		while (token !== TokenType.EOS) {
 			if (token === TokenType.StartTag) {
 				tagName = scanner.getTokenText()
+			}
+			else if (token === TokenType.AttributeName) {
+				attrName = scanner.getTokenText()
 			}
 
 			if (scanner.getTokenEnd() >= offset) {
@@ -66,51 +74,62 @@ export class FlitTokenScanner {
 		}
 
 		let type: FlitTokenType | null = null
-		let text = scanner.getTokenText()
 		let prefix = ''
-		let value = text
+		let value = ''
+		let attrValue: string | null = null
 
+		// `<`
 		if (token === TokenType.StartTagOpen) {
 			type = FlitTokenType.StartTagOpen
 			tagName = ''
-			value = ''
 		}
+
+		// `<tag`
 		else if (token === TokenType.StartTag) {
 			type = FlitTokenType.StartTag
+			value = tagName
 		}
-		else if (token === TokenType.AttributeName && tagName !== null) {
-			if (text[0] === ':') {
+
+		// `:class` or `:class=""`
+		else if (tagName && attrName) {
+			if (attrName[0] === ':') {
 				type = FlitTokenType.Binding
 				prefix = ':'
 			}
-			else if (text[0] === '.') {
+			else if (attrName[0] === '.') {
 				type = FlitTokenType.Property
 				prefix = '.'
 			}
-			else if (text[0] === '@' && text[1] === '@') {
+			else if (attrName[0] === '@' && attrName[1] === '@') {
 				type = FlitTokenType.ComEvent
 				prefix = '@@'
 			}
-			else if (text[0] === '@') {
+			else if (attrName[0] === '@') {
 				type = FlitTokenType.DomEvent
 				prefix = '@'
+			}
+
+			value = attrName.slice(prefix.length)
+
+			if (token === TokenType.AttributeValue) {
+				attrValue = scanner.getTokenText()
 			}
 		}
 		
 		if (type !== null) {
 			let end = scanner.getTokenEnd()
 			let start = scanner.getTokenOffset()
-			value = text.slice(prefix.length)
-
+	
 			if (type === FlitTokenType.StartTagOpen) {
 				start = end
 			}
 			
 			let result: FlitToken = {
 				type,
-				prefix,
-				value,
+				attrPrefix: prefix,
+				attrName: value,
 				tagName,
+				attrValue,
 				start,
 				end,
 				cursorOffset: offset - start,

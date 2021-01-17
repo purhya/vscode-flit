@@ -2,5 +2,5 @@
 export const config = {
     tags: ['html', 'css', 'svg'],
     pluginName: 'typescript-flit',
-    debugging: true,
+    debugging: false,
 }

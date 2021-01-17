@@ -83,9 +83,9 @@ export default class TemplateContextProvider {
 		let tagName = taggedNode.tag.getText()
 
 		return new TemplateContext(
-			fileName,
 			templateLiteral,
 			tagName,
+			fileName,
 			this.templateSettings,
 			this.helper,
 			this.typescript

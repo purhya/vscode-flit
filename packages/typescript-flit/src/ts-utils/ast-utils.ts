@@ -381,6 +381,23 @@ export function splitIntersectionTypes(type: ts.TypeNode, typescript: typeof ts)
 }
 
 
+/** Split `A | B | C` to `[A, B, C]` */
+export function splitUnionTypes(type: ts.TypeNode, typescript: typeof ts): ts.TypeNode[] {
+	let splitedTypes: ts.TypeNode[] = []
+
+	if (typescript.isUnionTypeNode(type)) {
+		for (let chindType of type.types) {
+			splitedTypes.push(...splitUnionTypes(chindType, typescript))
+		}
+	}
+	else {
+		splitedTypes.push(type)
+	}
+
+	return splitedTypes
+}
+
+
 /** Discovers class inheritance from given node by looking at `extends`. */
 export function resolveExtendedClasses(node: ts.ClassLikeDeclaration, typescript: typeof ts, checker: ts.TypeChecker): ClassOrInterfaceUsage<ts.ClassLikeDeclaration>[] | null {
 	return resolveExtendsOrImplements(node, (node: ts.Node): node is ts.ClassLikeDeclaration => {

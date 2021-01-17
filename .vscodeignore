@@ -1,6 +1,9 @@
-.vscode/
-.vscode-test/
+.vscode
+.vscode-test
 test/
+packages/
+node_modules/typescript-flit/out/data/types.js
+node_modules/typescript-flit/node_modules/@types
 **/*.map
 **/*.ts
 **/tsconfig.json

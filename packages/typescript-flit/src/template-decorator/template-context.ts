@@ -17,14 +17,14 @@ export default class TemplateContext {
 	document: TextDocument
 
 	constructor(
-		/** Name of the file the template is in. */
-		readonly fileName: string,
-
 		/** Template literal node. */
 		readonly node: ts.TemplateLiteral,
 
 		/** Template tag name. */
 		readonly tagName: string,
+
+		/** Name of the file the template is in. */
+		readonly fileName: string,
 
 		private readonly templateSettings: TemplateSettings,
 		private readonly helper: ScriptSourceHelper,

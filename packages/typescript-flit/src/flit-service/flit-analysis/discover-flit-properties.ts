@@ -3,7 +3,7 @@ import {getNodeDescription, getNodeMemberVisibility, hasModifierForNode} from '.
 import {FlitProperty} from './types'
 
 
-/** Discovers public properties from class or interface. */
+/** Discovers public properties from class. */
 export function discoverFlitProperties(declaration: ts.ClassLikeDeclaration, typescript: typeof ts, checker: ts.TypeChecker): FlitProperty[] {
 	let properties: FlitProperty[] = []
 
@@ -19,8 +19,8 @@ export function discoverFlitProperties(declaration: ts.ClassLikeDeclaration, typ
 
 
 /** Matches class properties from child nodes of a class declaration node. */
-function matchFlitComponentProperty(node: ts.Node, typescript: typeof ts, checker: ts.TypeChecker): FlitProperty | null {
-	// `class {property = value}`, property must be public and not readonly.
+function matchFlitComponentProperty(node: ts.ClassElement, typescript: typeof ts, checker: ts.TypeChecker): FlitProperty | null {
+	// `class {property = value, property: type = value}`, property must be public and not readonly.
 	if (typescript.isPropertyDeclaration(node) || typescript.isPropertySignature(node)) {
 		if (typescript.isIdentifier(node.name) || typescript.isStringLiteralLike(node.name)) {
 			let isPublic = getNodeMemberVisibility(node, typescript) === 'public'
@@ -62,4 +62,47 @@ function matchFlitComponentProperty(node: ts.Node, typescript: typeof ts, checke
 	// Flit doesn't like getters, so not check it.
 
 	return null
+}
+
+
+/** Discovers sub properties from class, like `refs` or slots. */
+export function discoverFlitSubProperties(declaration: ts.ClassLikeDeclaration, subPropertyName: string, typescript: typeof ts, checker: ts.TypeChecker): FlitProperty[] | null {
+	let properties: FlitProperty[] | null = null
+
+
+	let member = declaration.members.find(member => {
+		return member.name?.getText() === subPropertyName
+	})
+
+	if (!member) {
+		return null
+	}
+
+	let typeNode = member.getChildren().find(child => typescript.isTypeNode(child))
+	if (!typeNode) {
+		return null
+	}
+	
+	// refs: {...}
+	if (typescript.isTypeLiteralNode(typeNode)) {
+		properties = []
+
+		for (let typeMember of typeNode.members) {
+
+			// `{property: type}`.
+			if (typescript.isPropertySignature(typeMember) && typescript.isIdentifier(typeMember.name)) {
+				let property = {
+					name: typeMember.name.getText(),
+					nameNode: typeMember,
+					type: checker.getTypeAtLocation(typeMember),
+					description: getNodeDescription(typeMember),
+					sourceFile: typeMember.getSourceFile(),
+				}
+
+				properties.push(property)
+			}
+		}
+	}
+
+	return properties
 }

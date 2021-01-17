@@ -4,7 +4,7 @@ import {LanguageService as CSSLanguageService} from 'vscode-css-languageservice'
 import * as vscode from 'vscode-languageserver-types'
 import {VSCodeTSTranslater} from '../helpers/vs-ts-translater'
 import {TemplateDocumentProvider} from './template-document-provider'
-import {FlitService} from '../flit-component/flit-service'
+import {FlitService} from '../flit-service/flit-service'
 import {quickLog} from '../helpers/logger'
 import {TextDocument} from 'vscode-languageserver-textdocument'
 import {TemplateContext, TemplateLanguageService} from '../template-decorator'
@@ -36,7 +36,7 @@ export class TemplateLanguageServiceRouter implements TemplateLanguageService {
 		let tsCompletions: ts.CompletionInfo = this.translater.getEmptyCompletion()
 
 		if (document.languageId === 'html') {
-			let flitCompletions = this.flitService.getCompletions(document, position)
+			let flitCompletions = this.flitService.getCompletions(context, position)
 			if (flitCompletions) {
 				tsCompletions.entries.push(...flitCompletions.entries)
 			}
@@ -58,7 +58,7 @@ export class TemplateLanguageServiceRouter implements TemplateLanguageService {
 		let document = this.documentProvider.getDocumentAt(position)
 
 		if (document.languageId === 'html') {
-			let flitCompletions = this.flitService.getCompletions(document, position)
+			let flitCompletions = this.flitService.getCompletions(context, position)
 			if (flitCompletions) {
 				let flitCompletionEntry = flitCompletions.entries.find(entry => entry.name == name)
 				if (flitCompletionEntry) {
@@ -97,12 +97,12 @@ export class TemplateLanguageServiceRouter implements TemplateLanguageService {
 		let hover: vscode.Hover | null = null
 
 		if (document.languageId === 'html') {
-			let htmlDocument = this.documentProvider.getHTMLDocument()
-			let tsHover = this.flitService.getQuickInfo(document, position)
+			let tsHover = this.flitService.getQuickInfo(context, position)
 			if (tsHover) {
 				return tsHover
 			}
 
+			let htmlDocument = this.documentProvider.getHTMLDocument()
 			hover = this.htmlLanguageService.doHover(document, position, htmlDocument)
 		}
 		else if (document.languageId === 'css') {
@@ -122,7 +122,7 @@ export class TemplateLanguageServiceRouter implements TemplateLanguageService {
 		let document = this.documentProvider.getDocumentAt(position)
 
 		if (document.languageId === 'html') {
-			let flitDefinitions = this.flitService.getDefinition(document, position)
+			let flitDefinitions = this.flitService.getDefinition(context, position)
 			if (flitDefinitions) {
 				return flitDefinitions
 			}
@@ -219,7 +219,7 @@ export class TemplateLanguageServiceRouter implements TemplateLanguageService {
 
 			// HTML returned completions having `$0` like snippet placeholders.
 			return {
-				newText: tagComplete.replace(/\$\d/g, ''),
+				newText: this.translater.removeSnippetPlaceholders(tagComplete),
 			}
 		}
 
