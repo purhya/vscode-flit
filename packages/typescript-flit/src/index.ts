@@ -9,7 +9,7 @@ import {decorateWithTemplateLanguageService} from './template-decorator'
 
 
 /** Class as entry of the ts plugin. */
-class HTMLPlugin implements ts.server.PluginModule{
+class TemplatePlugin implements ts.server.PluginModule{
 
 	private readonly htmlLanguageService: HTMLLanguageService = getHTMLLanguageService()
 	private readonly cssLanguageService: CSSLanguageService = getFlitCSSLanguageService()
@@ -96,5 +96,5 @@ class HTMLPlugin implements ts.server.PluginModule{
 
 
 export = ((mod: {typescript: typeof ts}) => {
-	return new HTMLPlugin(mod.typescript)
+	return new TemplatePlugin(mod.typescript)
 }) as ts.server.PluginModuleFactory

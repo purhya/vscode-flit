@@ -32,7 +32,7 @@ export function getNodeSymbol(node: ts.Node, typescript: typeof ts, checker: ts.
 	}
 
 	// Resolve aliased symbols
-	if (symbol && isAliasSymbol(symbol)) {
+	if (symbol && isAliasSymbol(symbol, typescript)) {
 		symbol = checker.getAliasedSymbol(symbol)
 	}
 
@@ -66,8 +66,8 @@ export function getNodeIdentifier(node: ts.Node, typescript: typeof ts): ts.Iden
 
 
 /** Returns whether the symbol has `alias` flag. */
-function isAliasSymbol(symbol: ts.Symbol): boolean {
-	return hasFlag(symbol.flags, ts.SymbolFlags.Alias)
+function isAliasSymbol(symbol: ts.Symbol, typescript: typeof ts): boolean {
+	return hasFlag(symbol.flags, typescript.SymbolFlags.Alias)
 }
 
 
@@ -303,9 +303,9 @@ export function matchNodeDescentUnNesting<T>(node: ts.Node, match: (node: ts.Nod
 
 
 /** Returns the leading comment for given node, includes `/*` or `//`. */
-function getNodeLeadingComment(node: ts.Node): string | null {
+function getNodeLeadingComment(node: ts.Node, typescript: typeof ts): string | null {
 	let sourceFileText = node.getSourceFile().text
-	let leadingComments = ts.getLeadingCommentRanges(sourceFileText, node.pos)
+	let leadingComments = typescript.getLeadingCommentRanges(sourceFileText, node.pos)
 
 	if (leadingComments && leadingComments.length > 0) {
 		return sourceFileText.substring(leadingComments[0].pos, leadingComments[0].end)
@@ -316,8 +316,8 @@ function getNodeLeadingComment(node: ts.Node): string | null {
 
 
 /** Returns the description of given node, not includes `/*` or `//`. */
-export function getNodeDescription(node: ts.Node): string | null {
-	let comment = getNodeLeadingComment(node)
+export function getNodeDescription(node: ts.Node, typescript: typeof ts): string | null {
+	let comment = getNodeLeadingComment(node, typescript)
 	if (comment) {
 		// //	^\s*\/\/ ?
 		// /**	^\/\*\*[^\n]*

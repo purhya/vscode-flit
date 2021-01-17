@@ -93,7 +93,7 @@ function matchFlitDefining(node: ts.Node, defineKeyWord: string, typescript: typ
 		nameNode: tagName.node,
 		declaration,
 		type: checker.getTypeAtLocation(declaration),
-		description: getNodeDescription(declaration),
+		description: getNodeDescription(declaration, typescript),
 		sourceFile: declaration.getSourceFile(),
 	}
 }
@@ -119,13 +119,13 @@ function guessFlitComponent(node: ts.Node, typescript: typeof ts, checker: ts.Ty
 		return null
 	}
 
-	return getFlitDefinedFromComponentDeclaration(node, checker)
+	return getFlitDefinedFromComponentDeclaration(node, typescript, checker)
 }
 
 
 /** Make FlitDefined from class declaration. */
-export function getFlitDefinedFromComponentDeclaration(node: ts.ClassLikeDeclaration, checker: ts.TypeChecker): FlitDefined | null {
-	let description = getNodeDescription(node)
+export function getFlitDefinedFromComponentDeclaration(node: ts.ClassLikeDeclaration, typescript: typeof ts, checker: ts.TypeChecker): FlitDefined | null {
+	let description = getNodeDescription(node, typescript)
 	let name: string = ''
 
 	if (description) {
@@ -167,7 +167,7 @@ function guessFlitBinding(node: ts.Node, typescript: typeof ts, checker: ts.Type
 		return null
 	}
 
-	let description = getNodeDescription(node)
+	let description = getNodeDescription(node, typescript)
 	let name = ''
 
 	if (description) {

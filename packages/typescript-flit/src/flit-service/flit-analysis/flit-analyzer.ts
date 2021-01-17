@@ -200,7 +200,7 @@ export class FlitAnalyzer {
 	/** Makesure component analysised and returns result. */
 	private getAnalysisedSuperClass(declaration: ts.ClassLikeDeclaration): FlitComponent | undefined {
 		if (!this.components.has(declaration)) {
-			let defined = getFlitDefinedFromComponentDeclaration(declaration, this.typeChecker)
+			let defined = getFlitDefinedFromComponentDeclaration(declaration, this.typescript, this.typeChecker)
 			if (defined) {
 				this.analysisComponent(defined)
 			}

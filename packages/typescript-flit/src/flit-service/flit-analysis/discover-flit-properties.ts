@@ -32,7 +32,7 @@ function matchFlitComponentProperty(node: ts.ClassElement, typescript: typeof ts
 					name: node.name.getText(),
 					nameNode: node,
 					type: checker.getTypeAtLocation(node),
-					description: getNodeDescription(node),
+					description: getNodeDescription(node, typescript),
 					sourceFile: node.getSourceFile(),
 				}
 			}
@@ -52,7 +52,7 @@ function matchFlitComponentProperty(node: ts.ClassElement, typescript: typeof ts
 					name: node.name.getText(),
 					nameNode: node,
 					type,
-					description: getNodeDescription(node),
+					description: getNodeDescription(node, typescript),
 					sourceFile: node.getSourceFile(),
 				}
 			}
@@ -95,7 +95,7 @@ export function discoverFlitSubProperties(declaration: ts.ClassLikeDeclaration, 
 					name: typeMember.name.getText(),
 					nameNode: typeMember,
 					type: checker.getTypeAtLocation(typeMember),
-					description: getNodeDescription(typeMember),
+					description: getNodeDescription(typeMember, typescript),
 					sourceFile: typeMember.getSourceFile(),
 				}
 

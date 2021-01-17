@@ -92,7 +92,7 @@ function matchFlitInterfaceProperty(node: ts.Node, typescript: typeof ts, checke
 				name: node.name.getText(),
 				nameNode: node,
 				type: checker.getTypeAtLocation(node),
-				description: getNodeDescription(node),
+				description: getNodeDescription(node, typescript),
 				sourceFile: node.getSourceFile(),
 			}
 		}
