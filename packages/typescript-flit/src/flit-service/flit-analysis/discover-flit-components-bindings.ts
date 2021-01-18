@@ -129,9 +129,9 @@ export function getFlitDefinedFromComponentDeclaration(node: ts.ClassLikeDeclara
 	let name: string = ''
 
 	if (description) {
-		let m = description.match(/`<([\w-]+)/)
-		if (m && m[1].includes('-')) {
-			name = m[1]
+		let match = description.match(/`<([\w-]+)/)?.[1]
+		if (match && match.includes('-')) {
+			name = match
 		}
 	}
 
@@ -171,9 +171,9 @@ function guessFlitBinding(node: ts.Node, typescript: typeof ts, checker: ts.Type
 	let name = ''
 
 	if (description) {
-		let m = description.match(/`:(\w+)/)
-		if (m) {
-			name = m[1]
+		let match = description.match(/`:(\w+)/)?.[1]
+		if (match) {
+			name = match[1]
 		}
 	}
 
