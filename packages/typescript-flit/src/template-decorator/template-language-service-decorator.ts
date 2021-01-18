@@ -224,7 +224,7 @@ export default class TemplateLanguageServiceProxy {
 			let changes: ts.TextChange[] = []
 
 			for (let context of this.provider.getAllTemplateContexts(fileName)) {
-				if (!context.isCrossWithGlobalRange(start, end)) {
+				if (!context.intersectWithGlobalRange(start, end)) {
 					continue
 				}
 
@@ -253,7 +253,7 @@ export default class TemplateLanguageServiceProxy {
 			let actions: ts.CodeFixAction[] = []
 
 			for (let context of this.provider.getAllTemplateContexts(fileName)) {
-				if (!context.isCrossWithGlobalRange(start, end)) {
+				if (!context.intersectWithGlobalRange(start, end)) {
 					continue
 				}
 

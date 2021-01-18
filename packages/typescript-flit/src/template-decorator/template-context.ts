@@ -97,7 +97,7 @@ export default class TemplateContext {
 	}
 
 	/** Check whether a global offset inside current template range. */
-	isCrossWithGlobalRange(start: number, end: number) {
+	intersectWithGlobalRange(start: number, end: number) {
 		return !(end < this.bodyOffset || start > this.bodyOffset + this.rawText.length)
 	}
 }
