@@ -17,7 +17,7 @@ export default class ScriptSourceHelper {
 	/** Get source file from name. */
 	getSourceFile(fileName: string) {
 		let program = this.getProgram()
-		return program ? program.getSourceFile(fileName) : undefined
+		return program?.getSourceFile(fileName)
 	}
 
 	private getProgram() {

@@ -32,6 +32,7 @@ interface AutoInsertingItem {
 	cursorOffset: number
 }
 
+// May upgrade to `auto replacing items` to be more magic.
 const AutoInsertingItems: AutoInsertingItem[] = [{
 	from: '=$',
 	insert: '{}',

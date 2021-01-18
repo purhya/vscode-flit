@@ -42,7 +42,7 @@ function matchFlitComponentProperty(node: ts.ClassElement, typescript: typeof ts
 	// `class {set property(value)}`
 	else if (typescript.isSetAccessor(node)) {
 		if (typescript.isIdentifier(node.name)) {
-			let firstParameter = node.parameters.length > 0 ? node.parameters[0] : null
+			let firstParameter = node.parameters?.[0]
 			let type = checker.getTypeAtLocation(firstParameter || node)
 			let isPublic = getNodeMemberVisibility(node, typescript) === 'public'
 			let isStatic = hasModifierForNode(node, typescript.SyntaxKind.StaticKeyword)

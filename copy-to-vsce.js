@@ -1,4 +1,4 @@
-// We copy files to package and publish because vsce can't working for linked directory.
+// We copy files to package and publish because vsce can't work for linked directory.
 
 const fs = require('fs-extra')
 const path = require('path')

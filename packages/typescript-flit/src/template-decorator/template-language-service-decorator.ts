@@ -4,14 +4,13 @@ import TemplateContext from './template-context'
 import TemplateContextProvider from './template-context-provider'
 
 
-// from `(A, B) => C`
-// to `(D: () => C, A, B) => C`
+/** from `(A, B) => C` to `(D: () => C, A, B) => C` */
 type LanguageServiceWrapper<K extends keyof ts.LanguageService>
 	= ts.LanguageService[K] extends (...args: infer A) => infer R
 		? (callOriginal: () => R, ...args: A) => R
 		: never
 
-// Get value of object.
+/** Get value of object. */
 type ValueOf<O> = O[keyof O]
 
 
