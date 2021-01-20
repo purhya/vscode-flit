@@ -17,5 +17,5 @@ for (let fileOrFolderName of fileOrFolderNames) {
 }
 
 let text = fs.readFileSync(toDir + '/package.json').toString('utf8')
-text = text.repalce(/^.*"vscode:prepublish".+\n/m, '')
+text = text.replace(/^.*"vscode:prepublish".+\n/m, '')
 fs.writeFileSync(toDir + '/package.json', text)
