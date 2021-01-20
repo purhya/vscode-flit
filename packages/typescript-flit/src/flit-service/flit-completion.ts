@@ -5,7 +5,8 @@ import {DomElementEvents} from '../data/dom-element-events'
 import {FlitBindingModifiers} from '../data/flit-binding-modifiers'
 import {StyleProperties} from '../data/style-properties'
 import {TemplateContext} from '../template-decorator'
-import {getScriptElementKindFromToken, splitBindingProperty} from './utils'
+import {getScriptElementKindFromToken, splitPropertyAndModifiers} from './utils'
+import {FlitDomEventModifiers, FlitEventCategories} from '../data/flit-dom-event-modifiers'
 
 
 /** Provide flit completion service. */
@@ -20,48 +21,47 @@ export class FlitCompletion {
 		// <
 		if (token.type === FlitTokenType.StartTagOpen) {
 			let components = this.analyzer.getComponentsForCompletion('')
-			let info = addSuffixProperty(components, '')
+			let items = addSuffixProperty(components, '')
 
-			return this.makeCompletionInfo(info, token)
+			return this.makeCompletionInfo(items, token)
 		}
 
 		// tag
 		else if (token.type === FlitTokenType.StartTag) {
 			let components = this.analyzer.getComponentsForCompletion(token.attrName)
-			let info = addSuffixProperty(components, '')
+			let items = addSuffixProperty(components, '')
 
-			return this.makeCompletionInfo(info, token)
+			return this.makeCompletionInfo(items, token)
 		}
 
 		// :xxx
 		else if (token.type === FlitTokenType.Binding) {
-			let info = this.getBindingCompletionInfo(token, context)
-			return this.makeCompletionInfo(info, token)
+			let items = this.getBindingCompletionItems(token, context)
+			return this.makeCompletionInfo(items, token)
 		}
 
 		// .xxx
 		else if (token.type === FlitTokenType.Property) {
 			let properties = this.analyzer.getComponentPropertiesForCompletion(token.attrName, token.tagName) || []
-			let info = addSuffixProperty(properties, '=')
+			let items = addSuffixProperty(properties, '=')
 
-			return this.makeCompletionInfo(info, token)
+			return this.makeCompletionInfo(items, token)
 		}
 
 		// @xxx
 		else if (token.type === FlitTokenType.DomEvent) {
-			let domEvents = filterForCompletion(DomElementEvents, token.attrName)
+			let items = this.getEventCompletionItems(token)
 
-			if (token.tagName.includes('-')) {
+			if (token.tagName.includes('-') && !token.attrName.includes('.')) {
 				let comEvents = this.analyzer.getComponentEventsForCompletion(token.attrName, token.tagName) || []
 				let atComEvents = comEvents.map(item => ({name: '@' + item.name, description: item.description}))
-				let info = addSuffixProperty([...atComEvents, ...domEvents], '=')
 
-				return this.makeCompletionInfo(info, token)
+				items.unshift(
+					...addSuffixProperty(atComEvents, '=')
+				)
 			}
-			else {
-				let info = addSuffixProperty(domEvents, '=')
-				return this.makeCompletionInfo(info, token)
-			}
+
+			return this.makeCompletionInfo(items, token)
 		}
 
 		// @@xxx
@@ -75,8 +75,8 @@ export class FlitCompletion {
 		return null
 	}
 
-	private getBindingCompletionInfo(token: FlitToken, context: TemplateContext) {
-		let {bindingName, modifiers} = splitBindingProperty(token.attrName)
+	private getBindingCompletionItems(token: FlitToken, context: TemplateContext) {
+		let [bindingName, modifiers] = splitPropertyAndModifiers(token.attrName)
 
 		// If `:ref="|"`.
 		if (token.attrValue !== null && ['ref', 'slot'].includes(token.attrName)) {
@@ -138,13 +138,43 @@ export class FlitCompletion {
 			token.start = token.end - (1 + modifiers[modifiers.length - 1].length)
 			token.attrPrefix = '.'
 
-			let items = FlitBindingModifiers.model.filter(item => item.name.startsWith(modifiers[modifiers.length - 1]))
+			let items = filterForCompletion(FlitBindingModifiers.model, modifiers[modifiers.length - 1])
 			return addSuffixProperty(items, '')
 		}
 
 		// Completion of `:class` will be handled by `CSS Navigation` plugin.
 
 		return []
+	}
+	
+	private getEventCompletionItems(token: FlitToken) {
+		let [eventName, modifiers] = splitPropertyAndModifiers(token.attrName)
+
+		// `@click`, without modifiers.
+		if (modifiers.length === 0) {
+			let items = filterForCompletion(DomElementEvents, token.attrName)
+
+			return addSuffixProperty(items, '')
+		}
+
+		// `@click.l`, with modifiers.
+		else {
+
+			// Move cursor to `@click???|.l`
+			token.start = token.end - (1 + modifiers[modifiers.length - 1].length)
+			token.attrPrefix = '.'
+
+			// .passive, .stop, ...
+			let items = filterForCompletion(FlitDomEventModifiers.global, modifiers[modifiers.length - 1])
+
+			// .left, .right.
+			if (FlitEventCategories[eventName]) {
+				let category = FlitEventCategories[eventName]
+				items.push(...filterForCompletion(FlitDomEventModifiers[category], modifiers[modifiers.length - 1]))
+			}
+
+			return addSuffixProperty(items, '')
+		}
 	}
 
 	private makeCompletionInfo(

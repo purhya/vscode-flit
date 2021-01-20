@@ -2,7 +2,7 @@ import * as ts from 'typescript/lib/tsserverlibrary'
 import {FlitToken, FlitTokenType} from './flit-toker-scanner'
 import {FlitAnalyzer} from './flit-analysis/flit-analyzer'
 import {TemplateContext} from '../template-decorator'
-import {getScriptElementKindFromToken, splitBindingProperty} from './utils'
+import {getScriptElementKindFromToken, splitPropertyAndModifiers} from './utils'
 import {getNodeIdentifier, getNodeName} from '../ts-utils/ast-utils'
 
 
@@ -23,7 +23,7 @@ export class FlitDefinition {
 
 		// :xxx
 		else if (token.type === FlitTokenType.Binding) {
-			let binding = this.getBindingDefinitionInfo(token, context)
+			let binding = this.getBindingDefinitionItems(token, context)
 			return this.makeDefinitionInfo(binding, token)
 		}
 
@@ -42,8 +42,8 @@ export class FlitDefinition {
 		return null
 	}
 	
-	private getBindingDefinitionInfo(token: FlitToken, context: TemplateContext) {
-		let {bindingName} = splitBindingProperty(token.attrName)
+	private getBindingDefinitionItems(token: FlitToken, context: TemplateContext) {
+		let [bindingName] = splitPropertyAndModifiers(token.attrName)
 
 		// If `:ref="|"`.
 		if (token.attrValue !== null && ['ref', 'slot'].includes(token.attrName)) {

@@ -2,13 +2,9 @@ import {FlitToken, FlitTokenType} from "./flit-toker-scanner"
 import * as ts from 'typescript/lib/tsserverlibrary'
 
 
-export function splitBindingProperty(tokenValue: string) {
-	let [bindingName, ...modifiers] = tokenValue.split('.')
-
-	return {
-		bindingName,
-		modifiers,
-	}
+export function splitPropertyAndModifiers(tokenValue: string) {
+	let [property, ...modifiers] = tokenValue.split('.')
+	return [property, modifiers] as [string, string[]]
 }
 
 

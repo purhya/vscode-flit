@@ -4,8 +4,9 @@ import {FlitAnalyzer} from './flit-analysis/flit-analyzer'
 import {FlitBindingModifiers} from '../data/flit-binding-modifiers'
 import {StyleProperties} from '../data/style-properties'
 import {TemplateContext} from '../template-decorator'
-import {getScriptElementKindFromToken, getSymbolDisplayPartKindFromToken, splitBindingProperty} from './utils'
+import {getScriptElementKindFromToken, getSymbolDisplayPartKindFromToken, splitPropertyAndModifiers} from './utils'
 import {DomElementEvents} from '../data/dom-element-events'
+import {FlitDomEventModifiers, FlitEventCategories} from '../data/flit-dom-event-modifiers'
 
 
 /** Provide flit quickinfo service. */
@@ -25,7 +26,7 @@ export class FlitQuickInfo {
 
 		// :xxx
 		else if (token.type === FlitTokenType.Binding) {
-			let binding = this.getBindingQuickInfo(token, context)
+			let binding = this.getBindingQuickInfoItems(token, context)
 			return this.makeQuickInfo(binding, token)
 		}
 
@@ -37,7 +38,7 @@ export class FlitQuickInfo {
 
 		// @xxx
 		else if (token.type === FlitTokenType.DomEvent) {
-			let domEvent = findForQuickInfo(DomElementEvents, token.attrName)
+			let domEvent = this.getEventQuickInfoItems(token)
 			return this.makeQuickInfo(domEvent, token)
 		}
 
@@ -50,8 +51,8 @@ export class FlitQuickInfo {
 		return null
 	}
 	
-	private getBindingQuickInfo(token: FlitToken, context: TemplateContext) {
-		let {bindingName, modifiers} = splitBindingProperty(token.attrName)
+	private getBindingQuickInfoItems(token: FlitToken, context: TemplateContext) {
+		let [bindingName, modifiers] = splitPropertyAndModifiers(token.attrName)
 
 		// If `:ref="|"`.
 		if (token.attrValue !== null && ['ref', 'slot'].includes(token.attrName)) {
@@ -69,8 +70,7 @@ export class FlitQuickInfo {
 
 		// `:show`, without modifiers.
 		if (modifiers.length === 0) {
-			let binding = this.analyzer.getBinding(token.attrName)
-			return binding
+			return this.analyzer.getBinding(token.attrName)
 		}
 
 		// In `:style` range part.
@@ -78,8 +78,7 @@ export class FlitQuickInfo {
 			token.end = token.start + 1 + bindingName.length
 			token.attrName = bindingName
 
-			let binding = this.analyzer.getBinding(token.attrName)
-			return binding
+			return this.analyzer.getBinding(token.attrName)
 		}
 		
 		if (bindingName === 'style') {
@@ -132,6 +131,54 @@ export class FlitQuickInfo {
 		}
 
 		return null
+	}
+	
+	private getEventQuickInfoItems(token: FlitToken) {
+		let [eventName, modifiers] = splitPropertyAndModifiers(token.attrName)
+		
+		// `@click`, without modifiers.
+		if (modifiers.length === 0) {
+			return findForQuickInfo(DomElementEvents, token.attrName)
+		}
+
+		// In `@click` range part.
+		if (token.cursorOffset < 1 + eventName.length) {
+			token.end = token.start + 1 + eventName.length
+			token.attrName = eventName
+
+			return findForQuickInfo(DomElementEvents, token.attrName)
+		}
+		
+		// In `@click.l|???`
+		else {
+			let modifierStart = 1 + eventName.length
+			let matchModifier = ''
+
+			for (let modifier of modifiers) {
+				let modifierEnd = modifierStart + 1 + modifier.length
+				if (modifierEnd > token.cursorOffset) {
+					matchModifier = modifier
+					break
+				}
+
+				modifierStart = modifierEnd
+			}
+
+			// Move start and end to `@click???|.number|...`
+			token.start += modifierStart
+			token.end = token.start + 1 + matchModifier.length
+			token.attrPrefix = '.'
+			token.attrName = matchModifier
+
+			let item = findForQuickInfo(FlitDomEventModifiers.global, matchModifier)
+			let category = FlitEventCategories[eventName]
+
+			if (!item) {
+				item = findForQuickInfo(FlitDomEventModifiers[category], matchModifier)
+			}
+			
+			return item
+		}
 	}
 
 	private makeQuickInfo(
