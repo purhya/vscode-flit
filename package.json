@@ -121,7 +121,7 @@
 		"build": "tsc -b",
 		"watch": "tsc -b -w",
 		"link": "mklink /j \"node_modules/typescript-flit\" \"packages/typescript-flit\"",
-		"copy-files-for-vsce": "node vsce/copy.js"
+		"copy-to-vsce": "node copy-to-vsce.js"
 	},
 	"dependencies": {
 		"typescript-flit": "*"
