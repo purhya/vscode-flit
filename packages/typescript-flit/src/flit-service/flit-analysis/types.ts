@@ -16,11 +16,11 @@ interface FlitBaseItem {
 	readonly sourceFile: ts.SourceFile
 }
 
-export interface FlitProperty extends FlitBaseItem {}
+interface FlitProperty extends FlitBaseItem {}
 
-export interface FlitEvent extends FlitBaseItem {}
+interface FlitEvent extends FlitBaseItem {}
 
-export interface FlitDefined extends Omit<FlitBaseItem, 'nameNode'> {
+interface FlitDefined extends Omit<FlitBaseItem, 'nameNode'> {
 
 	/** Node of it's defined name. */
 	readonly nameNode: ts.Node | null
@@ -29,9 +29,9 @@ export interface FlitDefined extends Omit<FlitBaseItem, 'nameNode'> {
 	readonly declaration: ts.ClassLikeDeclaration
 }
 
-export interface FlitBinding extends FlitDefined {}
+interface FlitBinding extends FlitDefined {}
 
-export interface FlitComponent extends FlitDefined {
+interface FlitComponent extends FlitDefined {
 
 	/** Component public properties, not include properties of super class. */
 	readonly properties: Map<string, FlitProperty>

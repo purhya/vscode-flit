@@ -1,7 +1,6 @@
 import * as ts from 'typescript/lib/tsserverlibrary'
 import {resolveNodeValue} from '../../ts-utils/resolve-node-value'
 import {ClassOrInterfaceUsage, getNodeDescription, iterateExtendedClasses, iterateExtendedOrImplementedInterfaces, matchNodeDescentUnNesting, resolveNodeDeclarations} from '../../ts-utils/ast-utils'
-import {FlitDefined} from './types'
 
 
 /** Walk and Discover all flit components from a given node and it's children. */

@@ -2,7 +2,6 @@ import * as ts from 'typescript/lib/tsserverlibrary'
 import {discoverFlitBindings, discoverFlitComponents, getFlitDefinedFromComponentDeclaration} from './discover-flit-components-bindings'
 import {discoverFlitEvents} from './discover-flit-events'
 import {discoverFlitProperties, discoverFlitSubProperties} from './discover-flit-properties'
-import {FlitBinding, FlitComponent, FlitDefined, FlitEvent, FlitProperty} from './types'
 import {findNodeAscent, iterateExtendedClasses, resolveExtendedClasses} from '../../ts-utils/ast-utils'
 import {mayDebug} from '../../helpers/logger'
 

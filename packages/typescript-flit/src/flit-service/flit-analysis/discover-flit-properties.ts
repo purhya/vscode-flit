@@ -1,6 +1,5 @@
 import * as ts from 'typescript/lib/tsserverlibrary'
 import {getNodeDescription, getNodeMemberVisibility, hasModifierForNode} from '../../ts-utils/ast-utils'
-import {FlitProperty} from './types'
 
 
 /** Discovers public properties from class. */

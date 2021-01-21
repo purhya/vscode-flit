@@ -1,6 +1,5 @@
 import * as ts from 'typescript/lib/tsserverlibrary'
 import {getNodeDescription, resolveNodeDeclarations, splitIntersectionTypes} from '../../ts-utils/ast-utils'
-import {FlitEvent} from './types'
 
 
 /** Discovers event emitter from `extends Component<XXXEvents>`. */
