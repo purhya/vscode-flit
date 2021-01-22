@@ -3,7 +3,7 @@ import {TextDocument} from 'vscode-languageserver-textdocument'
 import {mayDebug, quickDebug} from '../helpers/logger'
 
 
-/** Flit token is modifiable. */
+/** The token object is modifiable. */
 export interface FlitToken {
 
 	/** Type of token. */

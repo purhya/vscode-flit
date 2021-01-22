@@ -58,7 +58,7 @@ function matchFlitComponentProperty(node: ts.ClassElement, typescript: typeof ts
 		}
 	}
 
-	// Flit doesn't like getters, so not check it.
+	// flit library doesn't like getters, so not check it.
 
 	return null
 }

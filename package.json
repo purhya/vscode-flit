@@ -1,6 +1,6 @@
 {
 	"name": "vscode-flit",
-	"displayName": "VScode Flit",
+	"displayName": "VScode flit",
 	"description": "Syntax highlighting and IntelliSense for html & CSS inside TypeScript tagged template strings in flit framework",
 	"icon": "images/logo.png",
 	"version": "1.0.0",

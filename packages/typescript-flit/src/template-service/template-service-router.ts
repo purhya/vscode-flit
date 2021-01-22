@@ -27,7 +27,7 @@ export class TemplateLanguageServiceRouter implements TemplateLanguageService {
 		this.translater = new VSCodeTSTranslater(typescript)
 		this.flitService = new FlitService(typescript, tsLanguageService, htmlLanguageService)
 
-		quickLog('Typescript Flit Plugin Started')
+		quickLog('Typescript flit Plugin Started')
 	}
 
 	getCompletionsAtPosition(context: TemplateContext, position: ts.LineAndCharacter): ts.CompletionInfo | undefined {
