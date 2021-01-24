@@ -7,6 +7,7 @@ import {StyleProperties} from '../data/style-properties'
 import {TemplateContext} from '../template-decorator'
 import {getScriptElementKindFromToken, splitPropertyAndModifiers} from './utils'
 import {FlitDomEventModifiers, FlitEventCategories} from '../data/flit-dom-event-modifiers'
+import {DomBooleanAttributes} from '../data/dom-boolean-attributes'
 
 
 /** Provide flit completion service. */
@@ -43,6 +44,14 @@ export class FlitCompletion {
 		// .xxx
 		else if (token.type === FlitTokenType.Property) {
 			let properties = this.analyzer.getComponentPropertiesForCompletion(token.attrName, token.tagName) || []
+			let items = addSuffixProperty(properties, '=')
+
+			return this.makeCompletionInfo(items, token)
+		}
+
+		// ?xxx
+		else if (token.type === FlitTokenType.BooleanAttribute) {
+			let properties = filterBooleanAttributeForCompletion(token.attrName, token.tagName)
 			let items = addSuffixProperty(properties, '=')
 
 			return this.makeCompletionInfo(items, token)
@@ -212,6 +221,18 @@ export class FlitCompletion {
 function filterForCompletion<T extends {name: string}>(items: T[], label: string): T[] {
 	return items.filter(item => item.name.startsWith(label))
 }
+
+
+function filterBooleanAttributeForCompletion(label: string, tagName: string): BooleanAttribute[] {
+	return DomBooleanAttributes.filter(item => {
+		if (item.forElements && !item.forElements.includes(tagName)) {
+			return false
+		}
+
+		return item.name.startsWith(label)
+	})
+}
+
 
 function addSuffixProperty(items: {name: string, description: string | null}[], suffix: string) {
 	return items.map(item => ({

@@ -36,6 +36,7 @@ export enum FlitTokenType {
 	StartTag,
 	Binding,
 	Property,
+	BooleanAttribute,
 	DomEvent,
 	ComEvent,
 }
@@ -99,6 +100,10 @@ export class FlitTokenScanner {
 			else if (attrName[0] === '.') {
 				type = FlitTokenType.Property
 				prefix = '.'
+			}
+			else if (attrName[0] === '?') {
+				type = FlitTokenType.BooleanAttribute
+				prefix = '?'
 			}
 			else if (attrName[0] === '@' && attrName[1] === '@') {
 				type = FlitTokenType.ComEvent

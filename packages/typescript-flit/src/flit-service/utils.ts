@@ -8,7 +8,7 @@ export function splitPropertyAndModifiers(tokenValue: string) {
 }
 
 
-export function getScriptElementKindFromToken(token: FlitToken, typescript: typeof ts) {
+export function getScriptElementKindFromToken(token: FlitToken, typescript: typeof ts): ts.ScriptElementKind {
 	// For ref with specified name.
 	if (token.attrValue !== null) {
 		return typescript.ScriptElementKind.memberVariableElement
@@ -21,16 +21,20 @@ export function getScriptElementKindFromToken(token: FlitToken, typescript: type
 			return typescript.ScriptElementKind.classElement
 
 		case FlitTokenType.Property:
+		case FlitTokenType.BooleanAttribute:
 			return typescript.ScriptElementKind.memberVariableElement
 
 		case FlitTokenType.ComEvent:
 		case FlitTokenType.DomEvent:
 			return typescript.ScriptElementKind.functionElement
+
+		default:
+			return typescript.ScriptElementKind.unknown
 	}
 }
 
 
-export function getSymbolDisplayPartKindFromToken(token: FlitToken, typescript: typeof ts) {
+export function getSymbolDisplayPartKindFromToken(token: FlitToken, typescript: typeof ts): ts.SymbolDisplayPartKind {
 	switch (token.type) {
 		case FlitTokenType.StartTagOpen:
 		case FlitTokenType.StartTag:
@@ -38,10 +42,14 @@ export function getSymbolDisplayPartKindFromToken(token: FlitToken, typescript: 
 			return typescript.SymbolDisplayPartKind.className
 
 		case FlitTokenType.Property:
+		case FlitTokenType.BooleanAttribute:
 			return typescript.SymbolDisplayPartKind.propertyName
 
 		case FlitTokenType.ComEvent:
 		case FlitTokenType.DomEvent:
 			return typescript.SymbolDisplayPartKind.functionName
+
+		default:
+			return typescript.SymbolDisplayPartKind.text
 	}
 }

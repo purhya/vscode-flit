@@ -7,6 +7,7 @@ import {TemplateContext} from '../template-decorator'
 import {getScriptElementKindFromToken, getSymbolDisplayPartKindFromToken, splitPropertyAndModifiers} from './utils'
 import {DomElementEvents} from '../data/dom-element-events'
 import {FlitDomEventModifiers, FlitEventCategories} from '../data/flit-dom-event-modifiers'
+import {DomBooleanAttributes} from '../data/dom-boolean-attributes'
 
 
 /** Provide flit quickinfo service. */
@@ -33,6 +34,12 @@ export class FlitQuickInfo {
 		// .xxx
 		else if (token.type === FlitTokenType.Property) {
 			let property = this.analyzer.getComponentProperty(token.attrName, token.tagName)
+			return this.makeQuickInfo(property, token)
+		}
+
+		// ?xxx
+		else if (token.type === FlitTokenType.BooleanAttribute) {
+			let property = FindBooleanAttributeForQuickInfo(token.attrName, token.tagName)
 			return this.makeQuickInfo(property, token)
 		}
 
@@ -234,4 +241,15 @@ export class FlitQuickInfo {
 
 function findForQuickInfo<T extends {name: string}>(items: T[], label: string): T | null {
 	return items.find(item => item.name === label) || null
+}
+
+
+function FindBooleanAttributeForQuickInfo(label: string, tagName: string): BooleanAttribute | null {
+	return DomBooleanAttributes.find(item => {
+		if (item.forElements && !item.forElements.includes(tagName)) {
+			return false
+		}
+
+		return item.name.startsWith(label)
+	}) || null
 }
