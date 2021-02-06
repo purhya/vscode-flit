@@ -16,6 +16,12 @@ for (let fileOrFolderName of fileOrFolderNames) {
 	fs.copySync(fromDir + '/' + fileOrFolderName, toDir + '/' + fileOrFolderName, {dereference: true})
 }
 
-let text = fs.readFileSync(toDir + '/package.json').toString('utf8')
-text = text.replace(/^.*"vscode:prepublish".+\n/m, '')
-fs.writeFileSync(toDir + '/package.json', text)
+
+function repalceText(relativePath, from, to) {
+	let text = fs.readFileSync(toDir + '/' + relativePath).toString('utf8')
+	text = text.replace(from, to)
+	fs.writeFileSync(toDir + '/' + relativePath, text)
+}
+
+repalceText('package.json', /^.*"vscode:prepublish".+\n/m, '')
+repalceText('node_modules/typescript-flit/out/config.js', 'debugging: true', 'debugging: false')

@@ -1,6 +1,6 @@
 import {LanguageService as HTMLLanguageService, TokenType} from 'vscode-html-languageservice'
 import {TextDocument} from 'vscode-languageserver-textdocument'
-import {mayDebug, quickDebug} from '../helpers/logger'
+import {mayDebug, quickLog} from '../helpers/logger'
 
 
 /** The token object is modifiable. */
@@ -154,7 +154,7 @@ export class FlitTokenScanner {
 		let token = scanner.scan()
 
 		while (token !== TokenType.EOS) {
-			quickDebug({
+			quickLog({
 				type: TokenType[token],
 				text: scanner.getTokenText(),
 				start: scanner.getTokenOffset(),

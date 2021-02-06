@@ -103,7 +103,6 @@ export default class TemplateContext {
 }
 
 
-
 namespace PlaceholderSubstitutionHelper {
 
 	export function replacePlaceholders(node: ts.TemplateLiteral, templateString: string, settings: TemplateSettings, typescript: typeof ts): string {
@@ -158,6 +157,6 @@ namespace PlaceholderSubstitutionHelper {
 	function getSubstitution(templateString: string, start: number, end: number, settings: TemplateSettings): string {
 		return settings.getSubstitution
 			? settings.getSubstitution(templateString, start, end)
-			: 'x'.repeat(end - start)
+			: ' '.repeat(end - start)
 	}
 }

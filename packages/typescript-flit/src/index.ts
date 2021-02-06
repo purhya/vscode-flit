@@ -86,9 +86,30 @@ class TemplatePlugin implements ts.server.PluginModule{
 				return ' '.repeat(end - start)
 			}
 		}
+
+		// For CSS document:
+		// `color: ${...}` -> `color: xxxxxx;`
+		// `{...}  ${...}` -> `{...}         `
 		else {
-			return 'x'.repeat(end - start)
+			let reverseFoundCharacter = this.reverseFindNotEmptyCharacter(templateString, start - 1)
+			if (reverseFoundCharacter === '}') {
+				return ' '.repeat(end - start)
+			}
+			else {
+				return 'x'.repeat(end - start)
+			}
 		}
+	}
+
+	private reverseFindNotEmptyCharacter(templateString: string, start: number) {
+		for (let i = start; i >= 0; i--) {
+			let char = templateString[i]
+			if (/\S/.test(char)) {
+				return char
+			}
+		}
+
+		return null
 	}
 
 	onConfigurationChanged(_config: any) {}
