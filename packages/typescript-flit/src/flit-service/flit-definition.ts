@@ -79,7 +79,7 @@ export class FlitDefinition {
 			return null
 		}
 
-		let node = item.declaration ? getNodeIdentifier(item.declaration, this.typescript)! : item.nameNode!
+		let node = item.declaration ? getNodeIdentifier(item.declaration, this.typescript) || item.nameNode! : item.nameNode!
 		let name = item.name || getNodeName(node, this.typescript) || ''
 		let kind = getScriptElementKindFromToken(token, this.typescript)
 		let fileName = node.getSourceFile().fileName

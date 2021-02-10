@@ -351,11 +351,17 @@ export function printNodeTreeText(node: ts.Node, typescript: typeof ts) {
 
 	let print = (node: ts.Node, tabCount: number) => {
 		let name = getNodeName(node, typescript)
+		let nodeText = node.getText()
+
+		if (nodeText.length > 50) {
+			nodeText = nodeText.slice(47) + '...'
+		}
+		nodeText = nodeText.replace(/[\r\n]/g, ' ')
 
 		text += '\n' + '\t'.repeat(tabCount)
 			+ `kind: ${typescript.SyntaxKind[node.kind]}; `
 			+ (name ? `name: ${getNodeName(node, typescript)}; ` : '')
-			+ `text: ${node.getText().slice(0, 40).replace(/[\r\n]/g, ' ')}; `
+			+ `text: ${nodeText}; `
 	}
 
 	walk(node, 0)

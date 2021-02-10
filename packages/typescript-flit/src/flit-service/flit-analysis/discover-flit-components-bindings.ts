@@ -79,10 +79,17 @@ function matchFlitDefining(node: ts.Node, defineKeyWord: string, typescript: typ
 		return null
 	}
 
-	let declarations = resolveNodeDeclarations(componentNode, typescript, checker)
+	let declaration: ts.ClassLikeDeclaration
+	if (typescript.isClassLike(componentNode)) {
+		declaration = componentNode
+	}
+	else {
+		let declarations = resolveNodeDeclarations(componentNode, typescript, checker)
 
-	// Here ignores interface declarations, so it only includes custom codes.
-	let declaration = declarations.find(declaration => typescript.isClassDeclaration(declaration)) as ts.ClassLikeDeclaration
+		// Here ignores interface declarations, so it only includes custom codes.
+		declaration = declarations.find(declaration => typescript.isClassLike(declaration)) as ts.ClassLikeDeclaration
+	}
+
 	if (!declaration) {
 		return null
 	}
