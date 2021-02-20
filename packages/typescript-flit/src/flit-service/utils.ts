@@ -18,9 +18,21 @@ export function getScriptElementKindFromToken(token: FlitToken, typescript: type
 		case FlitTokenType.StartTagOpen:
 		case FlitTokenType.StartTag:
 		case FlitTokenType.Binding:
-			return typescript.ScriptElementKind.classElement
+			if (token.attrValue === null) {
+				return typescript.ScriptElementKind.classElement
+			}
+			else {
+				return typescript.ScriptElementKind.memberVariableElement
+			}
 
 		case FlitTokenType.Property:
+			if (token.attrValue === null) {
+				return typescript.ScriptElementKind.memberVariableElement
+			}
+			else {
+				return typescript.ScriptElementKind.string
+			}
+
 		case FlitTokenType.BooleanAttribute:
 			return typescript.ScriptElementKind.memberVariableElement
 
@@ -39,9 +51,21 @@ export function getSymbolDisplayPartKindFromToken(token: FlitToken, typescript: 
 		case FlitTokenType.StartTagOpen:
 		case FlitTokenType.StartTag:
 		case FlitTokenType.Binding:
-			return typescript.SymbolDisplayPartKind.className
+			if (token.attrValue === null) {
+				return typescript.SymbolDisplayPartKind.className
+			}
+			else {
+				return typescript.SymbolDisplayPartKind.propertyName
+			}
 
 		case FlitTokenType.Property:
+			if (token.attrValue === null) {
+				return typescript.SymbolDisplayPartKind.propertyName
+			}
+			else {
+				return typescript.SymbolDisplayPartKind.text
+			}
+
 		case FlitTokenType.BooleanAttribute:
 			return typescript.SymbolDisplayPartKind.propertyName
 

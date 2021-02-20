@@ -2,7 +2,7 @@ import * as ts from 'typescript/lib/tsserverlibrary'
 import {getNodeDescription, resolveNodeDeclarations, splitIntersectionTypes} from '../../ts-utils/ast-utils'
 
 
-/** Discovers event emitter from `extends Component<XXXEvents>`. */
+/** Discovers event interfaces from `extends Component<XXXEvents>`. */
 export function discoverFlitEvents(declaration: ts.ClassLikeDeclaration, typescript: typeof ts, checker: ts.TypeChecker): FlitEvent[] {
 	let events: FlitEvent[] = []
 

@@ -68,6 +68,9 @@ export class FlitQuickInfo {
 			let componentPropertyName = token.attrName + 's' as 'refs' | 'slots'
 			let customTagName: string | null = null
 
+			token.attrPrefix = '.'
+			token.attrName = componentPropertyName + '.' + attrValue
+
 			// Get ancestor class declaration.
 			if (token.attrName === 'ref') {
 				let declaration = findNodeAscent(context.node, child => this.typescript.isClassLike(child)) as ts.ClassLikeDeclaration
@@ -86,10 +89,7 @@ export class FlitQuickInfo {
 				return null
 			}
 
-			token.attrPrefix = '.'
-			token.attrName = componentPropertyName + '.' + attrValue
-
-			let item = this.analyzer.getSubProperties(attrValue, customTagName, componentPropertyName)
+			let item = this.analyzer.getSubProperties(componentPropertyName, attrValue, customTagName)
 			if (item) {
 				return item
 			}

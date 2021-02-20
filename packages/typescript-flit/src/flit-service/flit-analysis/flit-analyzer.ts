@@ -4,6 +4,7 @@ import {discoverFlitEvents} from './discover-flit-events'
 import {discoverFlitProperties, discoverFlitSubProperties} from './discover-flit-properties'
 import {iterateExtendedClasses, resolveExtendedClasses} from '../../ts-utils/ast-utils'
 import {mayDebug} from '../../helpers/logger'
+import {discoverFlitIcons, FlitIcon} from './discover-flit-icons'
 
 
 export class FlitAnalyzer {
@@ -16,6 +17,8 @@ export class FlitAnalyzer {
 
 	/** Analysised bindings. */
 	private bindings: Map<string, FlitBinding> = new Map()
+
+	private icons: Map<string, FlitIcon> = new Map()
 
 	/** Analysised components, but extended class not been analysised because expired or can't been resolved. */
 	private extendedClassNotResolvedComponents: Set<FlitComponent> = new Set()
@@ -36,6 +39,19 @@ export class FlitAnalyzer {
 	/** Format type to a readable description. */
 	getTypeDescription(type: ts.Type) {
 		return this.typeChecker.typeToString(type)
+	}
+
+	/** Format type to a readable description. */
+	getTypeUnionStringList(type: ts.Type): string[] {
+		if (type.isUnion()) {
+			return type.types.map(t => this.getTypeUnionStringList(t)).flat()
+		}
+		else if (type.isStringLiteral()) {
+			return [this.getTypeDescription(type).replace(/['"]/g, '')]
+		}
+		else {
+			return []
+		}
 	}
 
 	/** Update to makesure reloading changed source files. */
@@ -118,6 +134,7 @@ export class FlitAnalyzer {
 	private analysisTSFile(sourceFile: ts.SourceFile) {
 		let components = discoverFlitComponents(sourceFile, this.typescript, this.typeChecker)
 		let bindings = discoverFlitBindings(sourceFile, this.typescript, this.typeChecker)
+		let icons = discoverFlitIcons(sourceFile, this.typescript)
 
 		// `@define ...` results will always cover others. 
 		for (let component of components) {
@@ -131,6 +148,19 @@ export class FlitAnalyzer {
 				name: binding.name,
 				description: binding.description,
 			}))
+		}
+
+		for (let icon of icons) {
+			this.icons.set(icon.name, icon)
+		}
+
+		if (icons.length > 0) {
+			mayDebug(() => {
+				return icons.map(i => ({
+					name: i.name,
+					description: i.description,
+				}))
+			})
 		}
 	}
 
@@ -202,7 +232,7 @@ export class FlitAnalyzer {
 	}
 
 	/** Makesure component analysised and returns result. */
-	private getAnalysisedSuperClass(declaration: ts.ClassLikeDeclaration): FlitComponent | undefined {
+	private getAnalysisedSuperClass(declaration: ts.ClassLikeDeclaration): FlitComponent | null {
 		if (!this.components.has(declaration)) {
 			let defined = getFlitDefinedFromComponentDeclaration(declaration, this.typescript, this.typeChecker)
 			if (defined) {
@@ -210,19 +240,93 @@ export class FlitAnalyzer {
 			}
 		}
 
-		return this.components.get(declaration)
+		return this.components.get(declaration) || null
 	}
 
+
+
 	/** Get component by it's tag name. */
-	getComponentByTagName(tagName: string): FlitComponent | undefined {
-		let component = [...this.components.values()].find(component => component.name === tagName)
-		return component
+	getComponent(name: string): FlitComponent | null {
+		let component = [...this.components.values()].find(component => component.name === name)
+		return component || null
 	}
 
 	/** Get component by it's class declaration. */
-	getComponentByDeclaration(declaration: ts.ClassLikeDeclaration): FlitComponent | undefined {
-		return this.components.get(declaration)
+	getComponentByDeclaration(declaration: ts.ClassLikeDeclaration): FlitComponent | null {
+		return this.components.get(declaration) || null
 	}
+
+	/** Get bindings that name matches. */
+	getBinding(name: string): FlitBinding | null {
+		for (let binding of this.bindings.values()) {
+			if (binding.name === name) {
+				return binding
+			}
+		}
+
+		return null
+	}
+
+	/** Get properties for component defined with `tagName`, and name matches. */
+	getComponentProperty(propertyName: string, tagName: string): FlitProperty | null {
+		let component = this.getComponent(tagName)
+		if (!component) {
+			return null
+		}
+	
+		for (let com of this.walkComponents(component)) {
+			for (let property of com.properties.values()) {
+				if (property.name === propertyName) {
+					return property
+				}
+			}
+		}
+
+		return null
+	}
+
+	/** Get events for component defined with `tagName`, and name matches. */
+	getComponentEvent(name: string, tagName: string): FlitEvent | null {
+		let component = this.getComponent(tagName)
+		if (!component) {
+			return null
+		}
+
+		for (let com of this.walkComponents(component)) {
+			for (let event of com.events.values()) {
+				if (event.name === name) {
+					return event
+				}
+			}
+		}
+
+		return null
+	}
+
+	/** Get all refs or slots properties outer class declaration contains given node. */
+	getSubProperties(propertyName: 'refs' | 'slots', subPropertyName: string, tagName: string): FlitProperty | null {
+		let component = this.getComponent(tagName)
+		if (!component) {
+			return null
+		}
+
+		for (let com of this.walkComponents(component)) {
+			for (let property of com[propertyName].values()) {
+				if (property.name === subPropertyName) {
+					return property
+				}
+			}
+		}
+
+		return null
+	}
+
+	/** Get a icon from it's defined file name. */
+	getIcon(name: string): FlitIcon | null {
+		return this.icons.get(name) || null
+	}
+
+
 
 	/** Get components that name starts with label. */
 	getComponentsForCompletion(label: string): FlitComponent[] {
@@ -252,7 +356,7 @@ export class FlitAnalyzer {
 
 	/** Get properties for component defined with `tagName`, and name starts with label. */
 	getComponentPropertiesForCompletion(label: string, tagName: string): FlitProperty[] | null {
-		let component = this.getComponentByTagName(tagName)
+		let component = this.getComponent(tagName)
 		if (!component) {
 			return null
 		}
@@ -281,7 +385,7 @@ export class FlitAnalyzer {
 
 	/** Get events for component defined with `tagName`, and name starts with label. */
 	getComponentEventsForCompletion(label: string, tagName: string): FlitEvent[] | null {
-		let component = this.getComponentByTagName(tagName)
+		let component = this.getComponent(tagName)
 		if (!component) {
 			return null
 		}
@@ -300,8 +404,8 @@ export class FlitAnalyzer {
 	}
 
 	/** Get all refs or slots properties outer class declaration contains given node. */
-	getSubPropertiesForCompletion(label: string, tagName: string, propertyName: 'refs' | 'slots'): FlitProperty[] | null {
-		let component = this.getComponentByTagName(tagName)
+	getSubPropertiesForCompletion(propertyName: 'refs' | 'slots', subPropertyNameLabel: string, tagName: string): FlitProperty[] | null {
+		let component = this.getComponent(tagName)
 		if (!component) {
 			return null
 		}
@@ -310,7 +414,7 @@ export class FlitAnalyzer {
 
 		for (let com of this.walkComponents(component)) {
 			for (let property of com[propertyName].values()) {
-				if (property.name.startsWith(label) && !properties.has(property.name)) {
+				if (property.name.startsWith(subPropertyNameLabel) && !properties.has(property.name)) {
 					properties.set(property.name, property)
 				}
 			}
@@ -319,79 +423,8 @@ export class FlitAnalyzer {
 		return [...properties.values()]
 	}
 
-	/** Get components that name matches label. */
-	getComponent(label: string): FlitComponent | null {
-		for (let component of this.components.values()) {
-			if (component.name === label) {
-				return component
-			}
-		}
-		
-		return null
-	}
-
-	/** Get bindings that name matches label. */
-	getBinding(label: string): FlitBinding | null {
-		for (let binding of this.bindings.values()) {
-			if (binding.name === label) {
-				return binding
-			}
-		}
-
-		return null
-	}
-
-	/** Get properties for component defined with `tagName`, and name matches label. */
-	getComponentProperty(label: string, tagName: string): FlitProperty | null {
-		let component = this.getComponentByTagName(tagName)
-		if (!component) {
-			return null
-		}
-	
-		for (let com of this.walkComponents(component)) {
-			for (let property of com.properties.values()) {
-				if (property.name === label) {
-					return property
-				}
-			}
-		}
-
-		return null
-	}
-
-	/** Get events for component defined with `tagName`, and name matches label. */
-	getComponentEvent(label: string, tagName: string): FlitEvent | null {
-		let component = this.getComponentByTagName(tagName)
-		if (!component) {
-			return null
-		}
-
-		for (let com of this.walkComponents(component)) {
-			for (let event of com.events.values()) {
-				if (event.name === label) {
-					return event
-				}
-			}
-		}
-
-		return null
-	}
-
-	/** Get all refs or slots properties outer class declaration contains given node. */
-	getSubProperties(label: string, tagName: string, propertyName: 'refs' | 'slots'): FlitProperty | null {
-		let component = this.getComponentByTagName(tagName)
-		if (!component) {
-			return null
-		}
-
-		for (let com of this.walkComponents(component)) {
-			for (let property of com[propertyName].values()) {
-				if (property.name === label) {
-					return property
-				}
-			}
-		}
-
-		return null
+	/** Get a icon when it's defined file name matches label. */
+	getIconsForCompletion(label: string): FlitIcon[] {
+		return [...this.icons.values()].filter(icon => icon.name.startsWith(label))
 	}
 }

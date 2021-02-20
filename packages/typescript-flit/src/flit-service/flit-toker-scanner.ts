@@ -24,6 +24,9 @@ export interface FlitToken {
 	/** Current attribute value like `"v"` inside `:ref="v"`, wrapped in quotes, be `null` cursor if not in an attribute value. */
 	attrValue: string | null
 
+	/** String of next token. */
+	nextTokenString: string
+
 	/** Start offset of current token. */
 	start: number
 
@@ -138,6 +141,9 @@ export class FlitTokenScanner {
 		if (type !== null) {
 			let end = scanner.getTokenEnd()
 			let start = scanner.getTokenOffset()
+
+			scanner.scan()
+			let nextTokenString = scanner.getTokenText()
 	
 			if (type === FlitTokenType.StartTagOpen) {
 				start = end
@@ -150,6 +156,7 @@ export class FlitTokenScanner {
 				tagName,
 				closestCustomTagName,
 				attrValue,
+				nextTokenString,
 				start,
 				end,
 				cursorOffset: offset - start,

@@ -50,6 +50,9 @@ export class FlitDefinition {
 			let attrValue = token.attrValue.replace(/^['"](.*?)['"]$/, '$1')
 			let componentPropertyName = token.attrName + 's' as 'refs' | 'slots'
 			let customTagName: string | null = null
+			
+			token.attrPrefix = '.'
+			token.attrName = componentPropertyName + '.' + attrValue
 
 			// Get ancestor class declaration.
 			if (token.attrName === 'ref') {
@@ -68,11 +71,8 @@ export class FlitDefinition {
 			if (!customTagName) {
 				return null
 			}
-			
-			token.attrPrefix = '.'
-			token.attrName = componentPropertyName + '.' + attrValue
 
-			let item = this.analyzer.getSubProperties(attrValue, customTagName, componentPropertyName)
+			let item = this.analyzer.getSubProperties(componentPropertyName, attrValue, customTagName)
 			if (item) {
 				return item
 			}

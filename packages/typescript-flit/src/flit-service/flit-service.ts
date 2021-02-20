@@ -46,11 +46,6 @@ export class FlitService {
 			return null
 		}
 
-		// Attribute completion only for binding `:ref`.
-		if (token.attrValue !== null && token.type !== FlitTokenType.Binding) {
-			return null
-		}
-
 		this.beFresh()
 
 		return this.completion.getCompletions(token, context)
