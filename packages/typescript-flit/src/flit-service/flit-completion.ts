@@ -8,6 +8,7 @@ import {TemplateContext} from '../template-decorator'
 import {getScriptElementKindFromToken, splitPropertyAndModifiers} from './utils'
 import {FlitDomEventModifiers, FlitEventCategories} from '../data/flit-dom-event-modifiers'
 import {DomBooleanAttributes} from '../data/dom-boolean-attributes'
+import {findNodeAscent} from '../ts-utils/ast-utils'
 
 
 /** Provide flit completion service. */
@@ -90,14 +91,33 @@ export class FlitCompletion {
 		// If `:ref="|"`.
 		if (token.attrValue !== null && ['ref', 'slot'].includes(token.attrName)) {
 			let attrValue = token.attrValue.replace(/^['"](.*?)['"]$/, '$1')
+			let customTagName: string | null = null
 			let componentPropertyName = token.attrName + 's' as 'refs' | 'slots'
+
+			// Get ancestor class declaration.
+			if (token.attrName === 'ref') {
+				let declaration = findNodeAscent(context.node, child => this.typescript.isClassLike(child)) as ts.ClassLikeDeclaration
+				if (!declaration) {
+					return null
+				}
+
+				customTagName = this.analyzer.getComponentByDeclaration(declaration)?.name || null
+			}
+			// Get closest component tag.
+			else {
+				customTagName = token.closestCustomTagName
+			}
+
+			if (!customTagName) {
+				return null
+			}
 
 			// Moves token range to `"|???|"`.
 			token.attrPrefix = ''
 			token.start += 1
 			token.end -= 1
 
-			let items = this.analyzer.getSubPropertiesForCompletion(context.node, componentPropertyName, attrValue)
+			let items = this.analyzer.getSubPropertiesForCompletion(attrValue, customTagName, componentPropertyName)
 			if (items) {
 				return addSuffixProperty(items, '')
 			}
@@ -153,7 +173,7 @@ export class FlitCompletion {
 
 		// Completion of `:class` will be handled by `CSS Navigation` plugin.
 
-		return []
+		return null
 	}
 	
 	private getEventCompletionItems(token: FlitToken) {
@@ -187,9 +207,13 @@ export class FlitCompletion {
 	}
 
 	private makeCompletionInfo(
-		items: {name: string, description: string | null, suffix: string}[],
+		items: {name: string, description: string | null, suffix: string}[] | null,
 		token: FlitToken,
-	): ts.CompletionInfo {
+	): ts.CompletionInfo | null {
+		if (!items) {
+			return null
+		}
+
 		let entries: ts.CompletionEntry[] = items.map(item => {
 			let name = token.attrPrefix + item.name
 			let kind = getScriptElementKindFromToken(token, this.typescript)

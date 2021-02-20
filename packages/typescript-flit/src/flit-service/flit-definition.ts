@@ -3,7 +3,7 @@ import {FlitToken, FlitTokenType} from './flit-toker-scanner'
 import {FlitAnalyzer} from './flit-analysis/flit-analyzer'
 import {TemplateContext} from '../template-decorator'
 import {getScriptElementKindFromToken, splitPropertyAndModifiers} from './utils'
-import {getNodeIdentifier, getNodeName} from '../ts-utils/ast-utils'
+import {findNodeAscent, getNodeIdentifier, getNodeName} from '../ts-utils/ast-utils'
 
 
 /** Provide flit definition service. */
@@ -49,11 +49,30 @@ export class FlitDefinition {
 		if (token.attrValue !== null && ['ref', 'slot'].includes(token.attrName)) {
 			let attrValue = token.attrValue.replace(/^['"](.*?)['"]$/, '$1')
 			let componentPropertyName = token.attrName + 's' as 'refs' | 'slots'
+			let customTagName: string | null = null
 
+			// Get ancestor class declaration.
+			if (token.attrName === 'ref') {
+				let declaration = findNodeAscent(context.node, child => this.typescript.isClassLike(child)) as ts.ClassLikeDeclaration
+				if (!declaration) {
+					return null
+				}
+
+				customTagName = this.analyzer.getComponentByDeclaration(declaration)?.name || null
+			}
+			// Get closest component tag.
+			else {
+				customTagName = token.closestCustomTagName
+			}
+
+			if (!customTagName) {
+				return null
+			}
+			
 			token.attrPrefix = '.'
 			token.attrName = componentPropertyName + '.' + attrValue
 
-			let item = this.analyzer.getSubProperties(context.node, componentPropertyName, attrValue)
+			let item = this.analyzer.getSubProperties(attrValue, customTagName, componentPropertyName)
 			if (item) {
 				return item
 			}

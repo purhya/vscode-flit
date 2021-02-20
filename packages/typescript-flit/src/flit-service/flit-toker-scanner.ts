@@ -9,6 +9,9 @@ export interface FlitToken {
 	/** Type of token. */
 	type: FlitTokenType
 
+	/** Closest ancestor custom tag. */
+	closestCustomTagName: string | null
+
 	/** Tag name current token inside of. */
 	tagName: string
 
@@ -55,9 +58,20 @@ export class FlitTokenScanner {
 		let tagName: string | null = null
 		let attrName: string | null = null
 
+		// `<c-1><c-2><div>`
+		// when meet `c-2`, it's closest custom tag is still `c-1`
+		let closestCustomTagName: string | null = null
+		let lastTagName: string | null = null
+
 		while (token !== TokenType.EOS) {
 			if (token === TokenType.StartTag) {
 				tagName = scanner.getTokenText()
+
+				if (lastTagName?.includes('-')) {
+					closestCustomTagName = lastTagName
+				}
+
+				lastTagName = tagName
 			}
 			else if (token === TokenType.AttributeName) {
 				attrName = scanner.getTokenText()
@@ -134,6 +148,7 @@ export class FlitTokenScanner {
 				attrPrefix: prefix,
 				attrName: value,
 				tagName,
+				closestCustomTagName,
 				attrValue,
 				start,
 				end,

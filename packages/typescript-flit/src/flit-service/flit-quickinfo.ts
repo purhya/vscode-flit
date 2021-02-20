@@ -8,6 +8,7 @@ import {getScriptElementKindFromToken, getSymbolDisplayPartKindFromToken, splitP
 import {DomElementEvents} from '../data/dom-element-events'
 import {FlitDomEventModifiers, FlitEventCategories} from '../data/flit-dom-event-modifiers'
 import {DomBooleanAttributes} from '../data/dom-boolean-attributes'
+import {findNodeAscent} from '../ts-utils/ast-utils'
 
 
 /** Provide flit quickinfo service. */
@@ -65,11 +66,30 @@ export class FlitQuickInfo {
 		if (token.attrValue !== null && ['ref', 'slot'].includes(token.attrName)) {
 			let attrValue = token.attrValue.replace(/^['"](.*?)['"]$/, '$1')
 			let componentPropertyName = token.attrName + 's' as 'refs' | 'slots'
+			let customTagName: string | null = null
+
+			// Get ancestor class declaration.
+			if (token.attrName === 'ref') {
+				let declaration = findNodeAscent(context.node, child => this.typescript.isClassLike(child)) as ts.ClassLikeDeclaration
+				if (!declaration) {
+					return null
+				}
+
+				customTagName = this.analyzer.getComponentByDeclaration(declaration)?.name || null
+			}
+			// Get closest component tag.
+			else {
+				customTagName = token.closestCustomTagName
+			}
+
+			if (!customTagName) {
+				return null
+			}
 
 			token.attrPrefix = '.'
 			token.attrName = componentPropertyName + '.' + attrValue
 
-			let item = this.analyzer.getSubProperties(context.node, componentPropertyName, attrValue)
+			let item = this.analyzer.getSubProperties(attrValue, customTagName, componentPropertyName)
 			if (item) {
 				return item
 			}

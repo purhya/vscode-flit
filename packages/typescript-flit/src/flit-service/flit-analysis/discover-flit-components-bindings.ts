@@ -179,7 +179,7 @@ function guessFlitBinding(node: ts.Node, typescript: typeof ts, checker: ts.Type
 	if (description) {
 		let match = description.match(/`:(\w+)/)?.[1]
 		if (match) {
-			name = match[1]
+			name = match
 		}
 	}
 

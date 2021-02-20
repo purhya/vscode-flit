@@ -18,7 +18,7 @@ export const DomElementEvents: DataItem[] = [
 	},
 	{
 		name: "change",
-		description: "The change event is fired for <input>, <select>, and <textarea> elements when a change to the element's value is committed by the user.",
+		description: "The change event is fired for `<input>`, `<select>`, and `<textarea>` elements when a change to the element's value is committed by the user.",
 	},
 	{
 		name: "click",

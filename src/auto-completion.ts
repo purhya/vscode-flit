@@ -33,11 +33,18 @@ interface AutoInsertingItem {
 }
 
 // May upgrade to `auto replacing items` to be more magic.
-const AutoInsertingItems: AutoInsertingItem[] = [{
-	from: '=$',
-	insert: '{}',
-	cursorOffset: 1,
-}]
+const AutoInsertingItems: AutoInsertingItem[] = [
+	{
+		from: '=$',
+		insert: '{}',
+		cursorOffset: 1,
+	},
+	{
+		from: '>$',
+		insert: '{}',
+		cursorOffset: 1,
+	}
+]
 
 
 async function autoInserting() {

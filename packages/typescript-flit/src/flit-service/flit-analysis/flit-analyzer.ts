@@ -2,7 +2,7 @@ import * as ts from 'typescript/lib/tsserverlibrary'
 import {discoverFlitBindings, discoverFlitComponents, getFlitDefinedFromComponentDeclaration} from './discover-flit-components-bindings'
 import {discoverFlitEvents} from './discover-flit-events'
 import {discoverFlitProperties, discoverFlitSubProperties} from './discover-flit-properties'
-import {findNodeAscent, iterateExtendedClasses, resolveExtendedClasses} from '../../ts-utils/ast-utils'
+import {iterateExtendedClasses, resolveExtendedClasses} from '../../ts-utils/ast-utils'
 import {mayDebug} from '../../helpers/logger'
 
 
@@ -126,6 +126,11 @@ export class FlitAnalyzer {
 	
 		for (let binding of bindings) {
 			this.bindings.set(binding.name, binding)
+
+			mayDebug(() => ({
+				name: binding.name,
+				description: binding.description,
+			}))
 		}
 	}
 
@@ -208,6 +213,17 @@ export class FlitAnalyzer {
 		return this.components.get(declaration)
 	}
 
+	/** Get component by it's tag name. */
+	getComponentByTagName(tagName: string): FlitComponent | undefined {
+		let component = [...this.components.values()].find(component => component.name === tagName)
+		return component
+	}
+
+	/** Get component by it's class declaration. */
+	getComponentByDeclaration(declaration: ts.ClassLikeDeclaration): FlitComponent | undefined {
+		return this.components.get(declaration)
+	}
+
 	/** Get components that name starts with label. */
 	getComponentsForCompletion(label: string): FlitComponent[] {
 		let components: FlitComponent[] = []
@@ -236,7 +252,7 @@ export class FlitAnalyzer {
 
 	/** Get properties for component defined with `tagName`, and name starts with label. */
 	getComponentPropertiesForCompletion(label: string, tagName: string): FlitProperty[] | null {
-		let component = [...this.components.values()].find(component => component.name === tagName)
+		let component = this.getComponentByTagName(tagName)
 		if (!component) {
 			return null
 		}
@@ -265,7 +281,7 @@ export class FlitAnalyzer {
 
 	/** Get events for component defined with `tagName`, and name starts with label. */
 	getComponentEventsForCompletion(label: string, tagName: string): FlitEvent[] | null {
-		let component = [...this.components.values()].find(component => component.name === tagName)
+		let component = this.getComponentByTagName(tagName)
 		if (!component) {
 			return null
 		}
@@ -284,13 +300,8 @@ export class FlitAnalyzer {
 	}
 
 	/** Get all refs or slots properties outer class declaration contains given node. */
-	getSubPropertiesForCompletion(node: ts.Node, propertyName: 'refs' | 'slots', label: string): FlitProperty[] | null {
-		let declaration = findNodeAscent(node, child => this.typescript.isClassLike(child)) as ts.ClassLikeDeclaration
-		if (!declaration) {
-			return null
-		}
-
-		let component = this.components.get(declaration)
+	getSubPropertiesForCompletion(label: string, tagName: string, propertyName: 'refs' | 'slots'): FlitProperty[] | null {
+		let component = this.getComponentByTagName(tagName)
 		if (!component) {
 			return null
 		}
@@ -332,7 +343,7 @@ export class FlitAnalyzer {
 
 	/** Get properties for component defined with `tagName`, and name matches label. */
 	getComponentProperty(label: string, tagName: string): FlitProperty | null {
-		let component = [...this.components.values()].find(component => component.name === tagName)
+		let component = this.getComponentByTagName(tagName)
 		if (!component) {
 			return null
 		}
@@ -350,7 +361,7 @@ export class FlitAnalyzer {
 
 	/** Get events for component defined with `tagName`, and name matches label. */
 	getComponentEvent(label: string, tagName: string): FlitEvent | null {
-		let component = [...this.components.values()].find(component => component.name === tagName)
+		let component = this.getComponentByTagName(tagName)
 		if (!component) {
 			return null
 		}
@@ -367,13 +378,8 @@ export class FlitAnalyzer {
 	}
 
 	/** Get all refs or slots properties outer class declaration contains given node. */
-	getSubProperties(node: ts.Node, propertyName: 'refs' | 'slots', label: string): FlitProperty | null {
-		let declaration = findNodeAscent(node, child => this.typescript.isClassLike(child)) as ts.ClassLikeDeclaration
-		if (!declaration) {
-			return null
-		}
-
-		let component = this.components.get(declaration)
+	getSubProperties(label: string, tagName: string, propertyName: 'refs' | 'slots'): FlitProperty | null {
+		let component = this.getComponentByTagName(tagName)
 		if (!component) {
 			return null
 		}
