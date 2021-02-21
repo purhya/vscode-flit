@@ -20,9 +20,9 @@ export default class TemplateContextProvider {
 	}
 
 	/** Get a TemplateContext from specified position of source file. */
-	getTemplateContextAtOffset(fileName: string, position: number): TemplateContext | null {
+	getTemplateContextAtOffset(fileName: string, offset: number): TemplateContext | null {
 		let sourceFile = this.helper.getSourceFile(fileName)
-		let taggedNode = this.getTaggedNode(fileName, position)
+		let taggedNode = this.getTaggedNode(fileName, offset)
 
 		if (!sourceFile || !taggedNode) {
 			return null

@@ -77,3 +77,4 @@ export function getSymbolDisplayPartKindFromToken(token: FlitToken, typescript: 
 			return typescript.SymbolDisplayPartKind.text
 	}
 }
+

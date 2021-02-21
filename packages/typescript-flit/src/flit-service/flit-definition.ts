@@ -1,7 +1,6 @@
 import * as ts from 'typescript/lib/tsserverlibrary'
 import {FlitToken, FlitTokenType} from './flit-toker-scanner'
 import {FlitAnalyzer} from './flit-analysis/flit-analyzer'
-import {TemplateContext} from '../template-decorator'
 import {getScriptElementKindFromToken, splitPropertyAndModifiers} from './utils'
 import {findNodeAscent, getNodeIdentifier, getNodeName} from '../ts-utils/ast-utils'
 
@@ -14,7 +13,7 @@ export class FlitDefinition {
 		private readonly typescript: typeof ts
 	) {}
 	
-	getDefinition(token: FlitToken, context: TemplateContext): ts.DefinitionInfoAndBoundSpan | null {
+	getDefinition(token: FlitToken, contextNode: ts.Node): ts.DefinitionInfoAndBoundSpan | null {
 		// tag
 		if (token.type === FlitTokenType.StartTag) {
 			let component = this.analyzer.getComponent(token.attrName)
@@ -23,7 +22,7 @@ export class FlitDefinition {
 
 		// :xxx
 		else if (token.type === FlitTokenType.Binding) {
-			let binding = this.getBindingDefinitionItems(token, context)
+			let binding = this.getBindingDefinitionItems(token, contextNode)
 			return this.makeDefinitionInfo(binding, token)
 		}
 
@@ -42,7 +41,7 @@ export class FlitDefinition {
 		return null
 	}
 	
-	private getBindingDefinitionItems(token: FlitToken, context: TemplateContext) {
+	private getBindingDefinitionItems(token: FlitToken, contextNode: ts.Node) {
 		let [bindingName] = splitPropertyAndModifiers(token.attrName)
 
 		// If `:ref="|"`.
@@ -56,7 +55,7 @@ export class FlitDefinition {
 
 			// Get ancestor class declaration.
 			if (token.attrName === 'ref') {
-				let declaration = findNodeAscent(context.node, child => this.typescript.isClassLike(child)) as ts.ClassLikeDeclaration
+				let declaration = findNodeAscent(contextNode, child => this.typescript.isClassLike(child)) as ts.ClassLikeDeclaration
 				if (!declaration) {
 					return null
 				}

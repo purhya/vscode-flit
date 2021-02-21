@@ -3,12 +3,12 @@ import {FlitToken, FlitTokenType} from './flit-toker-scanner'
 import {FlitAnalyzer} from './flit-analysis/flit-analyzer'
 import {FlitBindingModifiers} from '../data/flit-binding-modifiers'
 import {StyleProperties} from '../data/style-properties'
-import {TemplateContext} from '../template-decorator'
 import {getScriptElementKindFromToken, getSymbolDisplayPartKindFromToken, splitPropertyAndModifiers} from './utils'
 import {DomElementEvents} from '../data/dom-element-events'
 import {FlitDomEventModifiers, FlitEventCategories} from '../data/flit-dom-event-modifiers'
 import {DomBooleanAttributes} from '../data/dom-boolean-attributes'
 import {findNodeAscent} from '../ts-utils/ast-utils'
+import {getSimulateTokenFromNonTemplate} from './non-template'
 
 
 /** Provide flit quickinfo service. */
@@ -19,7 +19,7 @@ export class FlitQuickInfo {
 		private readonly typescript: typeof ts
 	) {}
 	
-	getQuickInfo(token: FlitToken, context: TemplateContext): ts.QuickInfo | null {
+	getQuickInfo(token: FlitToken, contextNode: ts.Node): ts.QuickInfo | null {
 		// tag
 		if (token.type === FlitTokenType.StartTag) {
 			let component = this.analyzer.getComponent(token.attrName)
@@ -28,7 +28,7 @@ export class FlitQuickInfo {
 
 		// :xxx
 		else if (token.type === FlitTokenType.Binding) {
-			let binding = this.getBindingQuickInfoItems(token, context)
+			let binding = this.getBindingQuickInfoItems(token, contextNode)
 			return this.makeQuickInfo(binding, token)
 		}
 
@@ -59,7 +59,7 @@ export class FlitQuickInfo {
 		return null
 	}
 	
-	private getBindingQuickInfoItems(token: FlitToken, context: TemplateContext) {
+	private getBindingQuickInfoItems(token: FlitToken, contextNode: ts.Node) {
 		let [bindingName, modifiers] = splitPropertyAndModifiers(token.attrName)
 
 		// If `:ref="|"`.
@@ -73,7 +73,7 @@ export class FlitQuickInfo {
 
 			// Get ancestor class declaration.
 			if (token.attrName === 'ref') {
-				let declaration = findNodeAscent(context.node, child => this.typescript.isClassLike(child)) as ts.ClassLikeDeclaration
+				let declaration = findNodeAscent(contextNode, child => this.typescript.isClassLike(child)) as ts.ClassLikeDeclaration
 				if (!declaration) {
 					return null
 				}
@@ -255,6 +255,15 @@ export class FlitQuickInfo {
 		}
 
 		return info
+	}
+
+	getNonTemplateQuickInfo(fileName: string, offset: number): ts.QuickInfo | null {
+		let simulateToken = getSimulateTokenFromNonTemplate(fileName, offset, this.analyzer.program, this.typescript)
+		if (simulateToken) {
+			return this.getQuickInfo(simulateToken.token, simulateToken.node)
+		}
+
+		return null
 	}
 }
 

@@ -4,11 +4,11 @@ import {FlitAnalyzer} from './flit-analysis/flit-analyzer'
 import {DomElementEvents} from '../data/dom-element-events'
 import {FlitBindingModifiers} from '../data/flit-binding-modifiers'
 import {StyleProperties} from '../data/style-properties'
-import {TemplateContext} from '../template-decorator'
 import {getScriptElementKindFromToken, splitPropertyAndModifiers} from './utils'
 import {FlitDomEventModifiers, FlitEventCategories} from '../data/flit-dom-event-modifiers'
 import {DomBooleanAttributes} from '../data/dom-boolean-attributes'
 import {findNodeAscent} from '../ts-utils/ast-utils'
+import {getSimulateTokenFromNonTemplate} from './non-template'
 
 
 /** Provide flit completion service. */
@@ -19,7 +19,7 @@ export class FlitCompletion {
 		private readonly typescript: typeof ts
 	) {}
 	
-	getCompletions(token: FlitToken, context: TemplateContext): ts.CompletionInfo | null {
+	getCompletions(token: FlitToken, contextNode: ts.Node): ts.CompletionInfo | null {
 		// <
 		if (token.type === FlitTokenType.StartTagOpen) {
 			let components = this.analyzer.getComponentsForCompletion('')
@@ -34,7 +34,7 @@ export class FlitCompletion {
 
 		// :xxx
 		else if (token.type === FlitTokenType.Binding) {
-			let items = this.getBindingCompletionItems(token, context)
+			let items = this.getBindingCompletionItems(token, contextNode)
 			return this.makeCompletionInfo(items, token)
 		}
 
@@ -84,7 +84,7 @@ export class FlitCompletion {
 		return null
 	}
 
-	private getBindingCompletionItems(token: FlitToken, context: TemplateContext) {
+	private getBindingCompletionItems(token: FlitToken, contextNode: ts.Node) {
 		let [bindingName, modifiers] = splitPropertyAndModifiers(token.attrName)
 
 		// If `:ref="|"`.
@@ -100,7 +100,7 @@ export class FlitCompletion {
 
 			// Get ancestor class declaration.
 			if (token.attrName === 'ref') {
-				let declaration = findNodeAscent(context.node, child => this.typescript.isClassLike(child)) as ts.ClassLikeDeclaration
+				let declaration = findNodeAscent(contextNode, child => this.typescript.isClassLike(child)) as ts.ClassLikeDeclaration
 				if (!declaration) {
 					return null
 				}
@@ -276,6 +276,15 @@ export class FlitCompletion {
 			isNewIdentifierLocation: false,
 			entries: entries,
 		}
+	}
+
+	getNonTemplateCompletions(fileName: string, offset: number): ts.CompletionInfo | null {
+		let simulateToken = getSimulateTokenFromNonTemplate(fileName, offset, this.analyzer.program, this.typescript)
+		if (simulateToken) {
+			return this.getCompletions(simulateToken.token, simulateToken.node)
+		}
+
+		return null
 	}
 }
 

@@ -68,24 +68,35 @@ export default class TemplateLanguageServiceProxy {
 	}
 
 	private wrapGetCompletionsAtPosition() {
-		if (!this.service.getCompletionsAtPosition) {
+		if (!this.service.getCompletionsAtPosition && !this.service.getNonTemplateCompletionsAtPosition) {
 			return
 		}
 
 		this.wrap('getCompletionsAtPosition', (callOriginal, fileName: string, offset: number, options) => {
 			let context = this.provider.getTemplateContextAtOffset(fileName, offset)
 			if (!context) {
+				if (this.service.getNonTemplateCompletionsAtPosition) {
+					let info = this.service.getNonTemplateCompletionsAtPosition!(fileName, offset, options)
+					if (info) {
+						return info
+					}
+				}
+
 				return callOriginal()
 			}
 
-			let localPosition = context.globalOffsetToLocalPosition(offset)
-			let info = this.service.getCompletionsAtPosition!(context, localPosition, options)
+			if (this.service.getCompletionsAtPosition) {
+				let localPosition = context.globalOffsetToLocalPosition(offset)
+				let info = this.service.getCompletionsAtPosition!(context, localPosition, options)
 
-			if (info) {
-				info.entries.forEach(entry => this.translateTextSpan(entry.replacementSpan, context!))
+				if (info) {
+					info.entries.forEach(entry => this.translateTextSpan(entry.replacementSpan, context!))
+				}
+
+				return info
 			}
 
-			return info
+			return undefined
 		})
 	}
 
@@ -96,41 +107,64 @@ export default class TemplateLanguageServiceProxy {
 	}
 
 	private wrapGetCompletionEntryDetails() {
-		if (!this.service.getCompletionEntryDetails) {
+		if (!this.service.getCompletionEntryDetails && !this.service.getNonTemplateCompletionEntryDetails) {
 			return
 		}
 
 		this.wrap('getCompletionEntryDetails', (callOriginal, fileName: string, offset: number, name: string, options) => {
 			let context = this.provider.getTemplateContextAtOffset(fileName, offset)
 			if (!context) {
+				if (this.service.getNonTemplateCompletionEntryDetails) {
+					let info = this.service.getNonTemplateCompletionEntryDetails!(fileName, offset, name, options)
+					if (info) {
+						return info
+					}
+				}
+
 				return callOriginal()
 			}
 
-			let localPosition = context.globalOffsetToLocalPosition(offset)
-			let entry = this.service.getCompletionEntryDetails!(context, localPosition, name, options)
+			if (this.service.getCompletionEntryDetails) {
+				let localPosition = context.globalOffsetToLocalPosition(offset)
+				let entry = this.service.getCompletionEntryDetails!(context, localPosition, name, options)
 
-			return entry
+				return entry
+			}
+
+			return undefined
 		})
 	}
 
 	private wrapGetQuickInfoAtPosition() {
-		if (!this.service.getQuickInfoAtPosition) {
+		if (!this.service.getQuickInfoAtPosition && !this.service.getNonTemplateQuickInfoAtPosition) {
 			return
 		}
 
 		this.wrap('getQuickInfoAtPosition', (callOriginal, fileName: string, offset: number) => {
 			let context = this.provider.getTemplateContextAtOffset(fileName, offset)
 			if (!context) {
+				if (this.service.getNonTemplateQuickInfoAtPosition) {
+					let info = this.service.getNonTemplateQuickInfoAtPosition!(fileName, offset)
+					if (info) {
+						return info
+					}
+				}
+
 				return callOriginal()
 			}
-			let localPosition = context.globalOffsetToLocalPosition(offset)
-			let info = this.service.getQuickInfoAtPosition!(context, localPosition)
+			
+			if (this.service.getCompletionEntryDetails) {
+				let localPosition = context.globalOffsetToLocalPosition(offset)
+				let info = this.service.getQuickInfoAtPosition!(context, localPosition)
 
-			if (info) {
-				this.translateTextSpan(info.textSpan, context)
+				if (info) {
+					this.translateTextSpan(info.textSpan, context)
+				}
+
+				return info
 			}
 
-			return info
+			return undefined
 		})
 	}
 

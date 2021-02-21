@@ -53,6 +53,10 @@ export class TemplateLanguageServiceRouter implements TemplateLanguageService {
 		return tsCompletions
 	}
 
+	getNonTemplateCompletionsAtPosition(fileName: string, offset: number): ts.CompletionInfo | undefined {
+		return this.flitService.getNonTemplateCompletions(fileName, offset) || undefined
+	}
+
 	getCompletionEntryDetails(context: TemplateContext, position: ts.LineAndCharacter, name: string): ts.CompletionEntryDetails | undefined {
 		this.documentProvider.updateContext(context)
 		let document = this.documentProvider.getDocumentAt(position)
@@ -71,6 +75,16 @@ export class TemplateLanguageServiceRouter implements TemplateLanguageService {
 		let item = completions?.items.find(x => x.label === name)
 		if (item) {
 			return this.translater.translateCompletionToEntryDetails(item)
+		}
+
+		return undefined
+	}
+
+	getNonTemplateCompletionEntryDetails(fileName: string, offset: number, name: string): ts.CompletionEntryDetails | undefined {
+		let completions = this.flitService.getNonTemplateCompletions(fileName, offset)
+		let entry = completions?.entries.find(x => x.name === name)
+		if (entry) {
+			return this.translater.translateTSCompletionEntryToEntryDetails(entry)
 		}
 
 		return undefined
@@ -115,6 +129,10 @@ export class TemplateLanguageServiceRouter implements TemplateLanguageService {
 		}
 
 		return undefined
+	}
+
+	getNonTemplateQuickInfoAtPosition(fileName: string, offset: number): ts.QuickInfo | undefined {
+		return this.flitService.getNonTemplateQuickInfo(fileName, offset) || undefined
 	}
 
 	getGlobalDefinitionAndBoundSpan(context: TemplateContext, position: ts.LineAndCharacter): ts.DefinitionInfoAndBoundSpan | undefined {

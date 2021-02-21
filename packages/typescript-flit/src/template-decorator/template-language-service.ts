@@ -79,4 +79,26 @@ export default interface TemplateLanguageService {
 		context: TemplateContext,
 		position: ts.LineAndCharacter
 	): ts.JsxClosingTagInfo | undefined
+
+
+	/** Triggers when not in template context, must returns `undefined` if no completion result. */
+	getNonTemplateCompletionsAtPosition?(
+		fileName: string,
+		offset: number,
+		options?: ts.GetCompletionsAtPositionOptions
+	): ts.CompletionInfo | undefined
+
+	/** Triggers when not in template context, must returns `undefined` if no completion result. */
+	getNonTemplateCompletionEntryDetails?(
+		fileName: string,
+		offset: number,
+		name: string,
+		options?: ts.FormatCodeOptions | ts.FormatCodeSettings
+	): ts.CompletionEntryDetails | undefined
+
+	/** Triggers when not in template context, must returns `undefined` if no completion result. */
+	getNonTemplateQuickInfoAtPosition?(
+		fileName: string,
+		offset: number,
+	): ts.QuickInfo | undefined
 }

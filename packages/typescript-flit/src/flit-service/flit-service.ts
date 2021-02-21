@@ -48,7 +48,11 @@ export class FlitService {
 
 		this.beFresh()
 
-		return this.completion.getCompletions(token, context)
+		return this.completion.getCompletions(token, context.node)
+	}
+
+	getNonTemplateCompletions(fileName: string, offset: number): ts.CompletionInfo | null {
+		return this.completion.getNonTemplateCompletions(fileName, offset)
 	}
 
 	getQuickInfo(context: TemplateContext, position: ts.LineAndCharacter): ts.QuickInfo | null {
@@ -64,7 +68,11 @@ export class FlitService {
 
 		this.beFresh()
 		
-		return this.quickInfo.getQuickInfo(token, context)
+		return this.quickInfo.getQuickInfo(token, context.node)
+	}
+
+	getNonTemplateQuickInfo(fileName: string, offset: number): ts.QuickInfo | null {
+		return this.quickInfo.getNonTemplateQuickInfo(fileName, offset)
 	}
 
 	getDefinition(context: TemplateContext, position: ts.LineAndCharacter): ts.DefinitionInfoAndBoundSpan | null {
@@ -83,6 +91,6 @@ export class FlitService {
 
 		this.beFresh()
 		
-		return this.flitDefinition.getDefinition(token, context)
+		return this.flitDefinition.getDefinition(token, context.node)
 	}
 }
