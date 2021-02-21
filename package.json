@@ -124,7 +124,7 @@
 		"copy-to-vsce": "node copy-to-vsce.js"
 	},
 	"dependencies": {
-		"typescript-flit": "*"
+		"typescript-flit": "^1.0.0"
 	},
 	"devDependencies": {
 		"@types/fs-extra": "^9.0.6",

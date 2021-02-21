@@ -5,7 +5,7 @@ const path = require('path')
 
 let fromDir = path.dirname(__filename)
 let toDir = path.dirname(__filename) + '/vsce'
-let excludeNames = ['.gitignore', '.vscode', '.git', 'packages', 'vsce', 'tsconfig.json', 'src', 'copy-to-vsce.js']
+let excludeNames = ['.gitignore', '.vscode', '.git', 'packages', 'vsce', 'tsconfig.json', 'src', 'copy-to-vsce.js', 'package-lock.json']
 
 fs.ensureDirSync(toDir)
 
