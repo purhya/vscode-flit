@@ -16,7 +16,11 @@ interface FlitBaseItem {
 	readonly sourceFile: ts.SourceFile
 }
 
-interface FlitProperty extends FlitBaseItem {}
+interface FlitProperty extends FlitBaseItem {
+
+	/** Whether property is public. */
+	public: boolean
+}
 
 interface FlitEvent extends FlitBaseItem {}
 
@@ -40,10 +44,10 @@ interface FlitComponent extends FlitDefined {
 	readonly events: Map<string, FlitEvent>
 
 	/** Component refs. */
-	readonly refs: Map<string, FlitEvent>
+	readonly refs: Map<string, FlitProperty>
 
 	/** Component slots. */
-	readonly slots: Map<string, FlitEvent>
+	readonly slots: Map<string, FlitProperty>
 
 	/** Direct super class, discovered from `... extends SuperClass`, not been resolved with super class chain. */
 	extendedClasses: FlitComponent[]

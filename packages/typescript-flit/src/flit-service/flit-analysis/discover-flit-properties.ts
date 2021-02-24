@@ -22,17 +22,18 @@ function matchFlitComponentProperty(node: ts.ClassElement, typescript: typeof ts
 	// `class {property = value, property: type = value}`, property must be public and not readonly.
 	if (typescript.isPropertyDeclaration(node) || typescript.isPropertySignature(node)) {
 		if (typescript.isIdentifier(node.name) || typescript.isStringLiteralLike(node.name)) {
-			let isPublic = getNodeMemberVisibility(node, typescript) === 'public'
-			let isReadOnly = hasModifierForNode(node, typescript.SyntaxKind.ReadonlyKeyword)
-			let isStatic = hasModifierForNode(node, typescript.SyntaxKind.StaticKeyword)
+			let bePublic = getNodeMemberVisibility(node, typescript) === 'public'
+			let beReadOnly = hasModifierForNode(node, typescript.SyntaxKind.ReadonlyKeyword)
+			let beStatic = hasModifierForNode(node, typescript.SyntaxKind.StaticKeyword)
 
-			if (isPublic && !isReadOnly && !isStatic) {
+			if (!beReadOnly && !beStatic) {
 				return {
 					name: node.name.getText(),
 					nameNode: node,
 					type: checker.getTypeAtLocation(node),
 					description: getNodeDescription(node, typescript),
 					sourceFile: node.getSourceFile(),
+					public: bePublic,
 				}
 			}
 		}
@@ -43,16 +44,17 @@ function matchFlitComponentProperty(node: ts.ClassElement, typescript: typeof ts
 		if (typescript.isIdentifier(node.name)) {
 			let firstParameter = node.parameters?.[0]
 			let type = checker.getTypeAtLocation(firstParameter || node)
-			let isPublic = getNodeMemberVisibility(node, typescript) === 'public'
-			let isStatic = hasModifierForNode(node, typescript.SyntaxKind.StaticKeyword)
+			let bePublic = getNodeMemberVisibility(node, typescript) === 'public'
+			let beStatic = hasModifierForNode(node, typescript.SyntaxKind.StaticKeyword)
 
-			if (isPublic && !isStatic) {
+			if (!beStatic) {
 				return{
 					name: node.name.getText(),
 					nameNode: node,
 					type,
 					description: getNodeDescription(node, typescript),
 					sourceFile: node.getSourceFile(),
+					public: bePublic,
 				}
 			}
 		}
@@ -90,12 +92,13 @@ export function discoverFlitSubProperties(declaration: ts.ClassLikeDeclaration, 
 
 			// `{property: type}`.
 			if (typescript.isPropertySignature(typeMember) && typescript.isIdentifier(typeMember.name)) {
-				let property = {
+				let property: FlitProperty = {
 					name: typeMember.name.getText(),
 					nameNode: typeMember,
 					type: checker.getTypeAtLocation(typeMember),
 					description: getNodeDescription(typeMember, typescript),
 					sourceFile: typeMember.getSourceFile(),
+					public: true,
 				}
 
 				properties.push(property)

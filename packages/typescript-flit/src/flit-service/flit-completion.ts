@@ -88,36 +88,53 @@ export class FlitCompletion {
 		let [bindingName, modifiers] = splitPropertyAndModifiers(token.attrName)
 
 		// If `:ref="|"`.
-		if (token.attrValue !== null && ['ref', 'slot'].includes(token.attrName)) {
+		if (token.attrValue !== null) {
 			let attrValue = token.attrValue.replace(/^['"](.*?)['"]$/, '$1')
-			let customTagName: string | null = null
-			let componentPropertyName = token.attrName + 's' as 'refs' | 'slots'
 
 			// Moves token range to `"|???|"`.
 			token.attrPrefix = ''
 			token.start += 1
 			token.end -= 1
 
-			// Get ancestor class declaration.
-			if (token.attrName === 'ref') {
+			if (['ref', 'slot'].includes(token.attrName)) {
+				let customTagName: string | null = null
+				let componentPropertyName = token.attrName + 's' as 'refs' | 'slots'
+
+				// Get ancestor class declaration.
+				if (token.attrName === 'ref') {
+					let declaration = findNodeAscent(contextNode, child => this.typescript.isClassLike(child)) as ts.ClassLikeDeclaration
+					if (!declaration) {
+						return null
+					}
+
+					customTagName = this.analyzer.getComponentByDeclaration(declaration)?.name || null
+				}
+				// Get closest component tag.
+				else {
+					customTagName = token.closestCustomTagName
+				}
+
+				if (!customTagName) {
+					return null
+				}
+
+				let items = this.analyzer.getSubPropertiesForCompletion(componentPropertyName, attrValue, customTagName)
+				return items
+			}
+			else if (['refComponent'].includes(token.attrName)) {
 				let declaration = findNodeAscent(contextNode, child => this.typescript.isClassLike(child)) as ts.ClassLikeDeclaration
 				if (!declaration) {
 					return null
 				}
 
-				customTagName = this.analyzer.getComponentByDeclaration(declaration)?.name || null
-			}
-			// Get closest component tag.
-			else {
-				customTagName = token.closestCustomTagName
-			}
+				let customTagName = this.analyzer.getComponentByDeclaration(declaration)?.name || null
+				if (!customTagName) {
+					return null
+				}
 
-			if (!customTagName) {
-				return null
+				let items = this.analyzer.getComponentPropertiesForCompletion(attrValue, customTagName, false)
+				return items
 			}
-
-			let items = this.analyzer.getSubPropertiesForCompletion(componentPropertyName, attrValue, customTagName)
-			return items
 		}
 		
 		// `:show`, without modifiers.

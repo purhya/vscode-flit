@@ -63,35 +63,56 @@ export class FlitQuickInfo {
 		let [bindingName, modifiers] = splitPropertyAndModifiers(token.attrName)
 
 		// If `:ref="|"`.
-		if (token.attrValue !== null && ['ref', 'slot'].includes(token.attrName)) {
+		if (token.attrValue !== null) {
 			let attrValue = token.attrValue.replace(/^['"](.*?)['"]$/, '$1')
-			let componentPropertyName = token.attrName + 's' as 'refs' | 'slots'
-			let customTagName: string | null = null
-
 			token.attrPrefix = '.'
-			token.attrName = componentPropertyName + '.' + attrValue
 
-			// Get ancestor class declaration.
-			if (token.attrName === 'ref') {
+			if (['ref', 'slot'].includes(token.attrName)) {
+				let componentPropertyName = token.attrName + 's' as 'refs' | 'slots'
+				let customTagName: string | null = null
+
+				token.attrName = componentPropertyName + '.' + attrValue
+
+				// Get ancestor class declaration.
+				if (token.attrName === 'ref') {
+					let declaration = findNodeAscent(contextNode, child => this.typescript.isClassLike(child)) as ts.ClassLikeDeclaration
+					if (!declaration) {
+						return null
+					}
+
+					customTagName = this.analyzer.getComponentByDeclaration(declaration)?.name || null
+				}
+				// Get closest component tag.
+				else {
+					customTagName = token.closestCustomTagName
+				}
+
+				if (!customTagName) {
+					return null
+				}
+
+				let item = this.analyzer.getSubProperties(componentPropertyName, attrValue, customTagName)
+				if (item) {
+					return item
+				}
+			}
+			else if (['refComponent'].includes(token.attrName)) {
+				token.attrName = attrValue
+
 				let declaration = findNodeAscent(contextNode, child => this.typescript.isClassLike(child)) as ts.ClassLikeDeclaration
 				if (!declaration) {
 					return null
 				}
 
-				customTagName = this.analyzer.getComponentByDeclaration(declaration)?.name || null
-			}
-			// Get closest component tag.
-			else {
-				customTagName = token.closestCustomTagName
-			}
+				let customTagName = this.analyzer.getComponentByDeclaration(declaration)?.name || null
+				if (!customTagName) {
+					return null
+				}
 
-			if (!customTagName) {
-				return null
-			}
-
-			let item = this.analyzer.getSubProperties(componentPropertyName, attrValue, customTagName)
-			if (item) {
-				return item
+				let item = this.analyzer.getComponentProperty(attrValue, customTagName)
+				if (item) {
+					return item
+				}
 			}
 		}
 

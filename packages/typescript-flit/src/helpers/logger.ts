@@ -35,7 +35,7 @@ export function quickLog(message: any) {
 
 
 /** Print debug info into typescript logs. */
-export function quickDebug(message: string | number | object) {
+export function quickDebug(message: any) {
 	if (config.debugging) {
 		quickLog(message)
 	}

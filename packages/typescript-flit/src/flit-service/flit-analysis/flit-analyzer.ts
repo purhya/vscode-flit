@@ -18,6 +18,7 @@ export class FlitAnalyzer {
 	/** Analysised bindings. */
 	private bindings: Map<string, FlitBinding> = new Map()
 
+	/** All imported icons. */
 	private icons: Map<string, FlitIcon> = new Map()
 
 	/** Analysised components, but extended class not been analysised because expired or can't been resolved. */
@@ -355,7 +356,7 @@ export class FlitAnalyzer {
 	}
 
 	/** Get properties for component defined with `tagName`, and name starts with label. */
-	getComponentPropertiesForCompletion(label: string, tagName: string): FlitProperty[] | null {
+	getComponentPropertiesForCompletion(label: string, tagName: string, mustBePublic = true): FlitProperty[] | null {
 		let component = this.getComponent(tagName)
 		if (!component) {
 			return null
@@ -365,6 +366,10 @@ export class FlitAnalyzer {
 
 		for (let com of this.walkComponents(component)) {
 			for (let property of com.properties.values()) {
+				if (mustBePublic && !property.public) {
+					continue
+				}
+				
 				if (property.name.startsWith(label) && !properties.has(property.name)) {
 					properties.set(property.name, property)
 				}
