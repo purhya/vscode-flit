@@ -48,9 +48,13 @@ export default class TemplateContextProvider {
 
 	private getTaggedNode(fileName: string, position: number) {
 		let currentNode = this.helper.getNodeAtOffset(fileName, position)
-
 		if (!currentNode) {
 			return null
+		}
+
+		// `${...|}` - If mouse is here, will capture a template span node, this is not what we want.
+		if (this.typescript.isTemplateMiddle(currentNode) && currentNode.getStart() === position) {
+			return
 		}
 
 		let taggedNode = findNodeAscent(currentNode, node => {
