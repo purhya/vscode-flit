@@ -8,8 +8,8 @@ import {quickDebug} from '../helpers/logger'
 
 export default class TemplateContextProvider {
 
-	helper: ScriptSourceHelper
-	private cache: TemplateContextCache = new TemplateContextCache()
+	private readonly helper: ScriptSourceHelper
+	private readonly cache: TemplateContextCache = new TemplateContextCache()
 
 	constructor(
 		private readonly typescript: typeof ts,
