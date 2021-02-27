@@ -87,7 +87,7 @@ export class FlitCompletion {
 	private getBindingCompletionItems(token: FlitToken, contextNode: ts.Node) {
 		let [bindingName, modifiers] = splitPropertyAndModifiers(token.attrName)
 
-		// If `:ref="|"`.
+		// `:ref="|"`.
 		if (token.attrValue !== null) {
 			let attrValue = token.attrValue.replace(/^['"](.*?)['"]$/, '$1')
 
@@ -121,7 +121,9 @@ export class FlitCompletion {
 				let items = this.analyzer.getSubPropertiesForCompletion(componentPropertyName, attrValue, customTagName)
 				return items
 			}
-			else if (['refComponent'].includes(token.attrName)) {
+
+			// `:model="|"`.
+			else if (['model', 'refComponent'].includes(token.attrName)) {
 				let declaration = findNodeAscent(contextNode, child => this.typescript.isClassLike(child)) as ts.ClassLikeDeclaration
 				if (!declaration) {
 					return null

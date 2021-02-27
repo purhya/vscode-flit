@@ -96,7 +96,9 @@ export class FlitQuickInfo {
 					return item
 				}
 			}
-			else if (['refComponent'].includes(token.attrName)) {
+
+			// `:model="|"`.
+			else if (['model', 'refComponent'].includes(token.attrName)) {
 				token.attrName = attrValue
 
 				let declaration = findNodeAscent(contextNode, child => this.typescript.isClassLike(child)) as ts.ClassLikeDeclaration
