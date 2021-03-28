@@ -3,6 +3,7 @@ import {FlitToken, FlitTokenType} from './flit-toker-scanner'
 import * as ts from 'typescript/lib/tsserverlibrary'
 
 
+/** Supports event auto completion at `on(...)`. */
 export function getSimulateTokenFromNonTemplate(fileName: string, offset: number, program: ts.Program, typescript: typeof ts): {node: ts.Node, token: FlitToken} | null {
 	let sourceFile = program.getSourceFile(fileName)
 	if (!sourceFile) {

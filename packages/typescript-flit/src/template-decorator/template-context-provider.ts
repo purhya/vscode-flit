@@ -53,8 +53,8 @@ export default class TemplateContextProvider {
 		}
 
 		// `${...|}` - If mouse is here, will capture a template span node, this is not what we want.
-		if (this.typescript.isTemplateMiddle(currentNode) && currentNode.getStart() === position) {
-			return
+		if (this.typescript.isTemplateMiddleOrTemplateTail(currentNode) && currentNode.getStart() === position) {
+			return null
 		}
 
 		let taggedNode = findNodeAscent(currentNode, node => {
