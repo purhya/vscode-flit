@@ -25,6 +25,18 @@ export const DomElementEvents: DataItem[] = [
 		description: "A pointing device button has been pressed and released on an element.",
 	},
 	{
+		name: 'compositionstart',
+		description: "When a text composition system such as an input method editor starts a new composition session.",
+	},
+	{
+		name: 'compositionupdate',
+		description: "When a new character is received in the context of a text composition session controlled by a text composition system such as an input method editor.",
+	},
+	{
+		name: 'compositionend',
+		description: "When a text composition system such as an input method editor completes or cancels the current composition session.",
+	},
+	{
 		name: "contextmenu",
 		description: "The right button of the mouse is clicked (before the context menu is displayed).",
 	},
