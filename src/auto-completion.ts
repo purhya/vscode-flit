@@ -25,24 +25,24 @@ interface AutoInsertingItem {
 	/** From string `=$`. */
 	from: string
 
-	/** Insert string `{}` */
-	insert: string
-
 	/** Cursor offset after inserting. */
 	cursorOffset: number
+
+	/** Insert string `{}` */
+	insert: string
 }
 
 // May upgrade to `auto replacing items` to be more magic.
 const AutoInsertingItems: AutoInsertingItem[] = [
 	{
 		from: '=$',
-		insert: '{}',
 		cursorOffset: 1,
+		insert: '{}',
 	},
 	{
 		from: '>$',
-		insert: '{}',
 		cursorOffset: 1,
+		insert: '{}',
 	}
 ]
 
@@ -71,6 +71,8 @@ async function autoInserting() {
 			// Moves cursor to `{|}`
 			let cursorPosition = insertPosition.translate(0, cursorOffset)
 			editor.selection = new vscode.Selection(cursorPosition, cursorPosition)
+
+			break
 		}
 	}
 }

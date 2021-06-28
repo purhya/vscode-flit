@@ -52,7 +52,12 @@ export default class TemplateContextProvider {
 			return null
 		}
 
-		// `${...|}` - If mouse is here, will capture a template span node, this is not what we want.
+		// `${a.b|...}` - If mouse is here, will capture a span node
+		if (this.typescript.isTemplateSpan(currentNode)) {
+			return null
+		}
+
+		// `${...|}` - If mouse is here, will capture a template tail node, this is not what we want.
 		if (this.typescript.isTemplateMiddleOrTemplateTail(currentNode) && currentNode.getStart() === position) {
 			return null
 		}

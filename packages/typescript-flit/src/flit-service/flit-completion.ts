@@ -229,8 +229,7 @@ export class FlitCompletion {
 		// .property|
 		else {
 			let properties = this.analyzer.getComponentPropertiesForCompletion(token.attrName, token.tagName) || []
-			let items = addSuffixProperty(properties, '=', token)
-			return items
+			return properties
 		}
 	}
 	
